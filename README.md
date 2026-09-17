@@ -123,6 +123,17 @@ disk through a virtual host mapped read-only to the one folder the document came
 only `http`, `https` and `mailto`, so a document cannot launch a local executable through a `file://` link.
 Turn `AllowHtml` on for documents you wrote.
 
+## Installing
+
+A built package is checked in at [`packages/`](packages/), so Studio can install it without building
+anything: add that folder as a package source under **Manage Packages → Settings** and install
+**Shaker.Markdown.Activities** from it. [`packages/README.md`](packages/README.md) has the version, the
+commit it was built from, its checksum and what is inside it.
+
+Reinstalling over the same version number is the one thing to watch: Studio and the project's own
+`packages` folder both cache by version, so uninstall the old copy and delete it from the project first, or
+you will be looking at the previous build.
+
 ## Building
 
 The whole solution builds on Linux and macOS as well as Windows — `EnableWindowsTargeting` covers the WPF
