@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Design time only, and Windows only, like any Studio UI. Two targets because the two generations of
+      Studio load different things: a Windows-legacy project loads the .NET Framework assets, a modern one
+      runs on .NET 8 and loads the .NET assets and never the others.
+    -->
+    <TargetFrameworks>net461;net6.0-windows</TargetFrameworks>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Shaker.Markdown.Activities.Design</RootNamespace>
+    <AssemblyName>Shaker.Markdown.Activities.Design</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0-windows'">
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <!-- See the note in Shaker.Markdown.Activities.csproj: the polyfills behind Markdig floor at net462. -->
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shaker.Markdown.Activities\Shaker.Markdown.Activities.csproj" />
+    <!--
+      Referenced directly rather than through the activities: they keep Core private so that it travels as
+      an embedded assembly rather than a dependency, which also means it does not flow through to here.
+    -->
+    <ProjectReference Include="..\Shaker.Markdown.Core\Shaker.Markdown.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    .NET Framework keeps the whole designer in System.Activities.Presentation, and ships it as a reference
+    assembly, so this target needs nothing beyond the framework.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Activities" />
+    <Reference Include="System.Activities.Presentation" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+  </ItemGroup>
+
+  <!--
+    .NET splits the designer across two assemblies, and publishes neither, so this target compiles against
+    the stubs in stubs/ and lets Studio supply the real ones. Private="false" keeps them out of the package.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0-windows'">
+    <PackageReference Include="UiPath.Workflow" Version="6.0.0-20240401-07" PrivateAssets="all" />
+    <ProjectReference Include="..\..\stubs\System.Activities.Metadata\System.Activities.Metadata.csproj" Private="false" />
+    <ProjectReference Include="..\..\stubs\System.Activities.Presentation\System.Activities.Presentation.csproj" Private="false" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,99 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore Shaker.Markdown.Activities.sln
+
+      - name: Build
+        run: dotnet build Shaker.Markdown.Activities.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Shaker.Markdown.Activities.sln -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack src/Shaker.Markdown.Activities/Shaker.Markdown.Activities.csproj -c Release -o artifacts --no-build
+
+      # Packing without the designers is only a warning, and warnings do not fail a build, so the shape of
+      # the package is asserted here instead.
+      - name: Verify package layout
+        run: |
+          set -euo pipefail
+          package=$(ls artifacts/*.nupkg)
+          contents=$(unzip -l "$package")
+          echo "$contents"
+
+          expect() {
+            if ! grep -q "$1" <<<"$contents"; then
+              echo "::error::Expected $1 in $package"
+              exit 1
+            fi
+          }
+
+          # The activities and the engine, for both generations of Studio.
+          expect "lib/net461/Shaker.Markdown.Activities.dll"
+          expect "lib/net461/Shaker.Markdown.Core.dll"
+          expect "lib/net6.0/Shaker.Markdown.Activities.dll"
+          expect "lib/net6.0/Shaker.Markdown.Core.dll"
+
+          # The designers. Both builds ship: a Windows-legacy project loads the .NET Framework one, a
+          # modern Studio loads the .NET one and never the other.
+          expect "lib/net461/Shaker.Markdown.Activities.Design.dll"
+          expect "lib/net6.0/Shaker.Markdown.Activities.Design.dll"
+
+          # The ribbon viewer, which only modern Studio loads, and its icon. The icon is named by path
+          # rather than by pack URI, so the file has to sit beside the assembly.
+          expect "lib/net6.0/Shaker.Markdown.Activities.Wizard.dll"
+          expect "lib/net6.0/markdown.png"
+
+          # WebView2 travels with the viewer rather than as a dependency of the package.
+          expect "lib/net6.0/Microsoft.Web.WebView2.Core.dll"
+          expect "lib/net6.0/Microsoft.Web.WebView2.Wpf.dll"
+          expect "lib/net6.0/WebView2Loader.dll"
+
+          nuspec=$(unzip -p "$package" "*.nuspec")
+
+          # Studio and the Robot provide the workflow runtime. Depending on it here would install a second
+          # copy beside the host's, which breaks loading System.Activities in a Windows project.
+          if grep -q "UiPath.Workflow" <<<"$nuspec"; then
+            echo "::error::The package must not depend on UiPath.Workflow; the host provides the workflow runtime"
+            echo "$nuspec"
+            exit 1
+          fi
+
+          # Nor on the Studio API, nor on WebView2: both are design time only and neither belongs in an
+          # automation project's dependency graph.
+          for unwanted in UiPath.Activities.Api Microsoft.Web.WebView2; do
+            if grep -q "id=\"$unwanted\"" <<<"$nuspec"; then
+              echo "::error::The package must not depend on $unwanted; it is design time only"
+              echo "$nuspec"
+              exit 1
+            fi
+          done
+
+          # Markdig is the one real dependency, and it is declared rather than embedded.
+          if ! grep -q "id=\"Markdig\"" <<<"$nuspec"; then
+            echo "::error::The package should declare its Markdig dependency"
+            echo "$nuspec"
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: activity-package
+          path: artifacts/*.nupkg

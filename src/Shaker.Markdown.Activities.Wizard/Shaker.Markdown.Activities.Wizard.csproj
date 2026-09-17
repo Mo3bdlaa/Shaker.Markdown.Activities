@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Design time only, and Windows only, like any Studio UI. It targets net6.0-windows rather than net461
+      because modern Studio runs on .NET 8 and never loads the .NET Framework assets; EnableWindowsTargeting
+      lets the whole solution still build on a machine that is not Windows.
+    -->
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>Shaker.Markdown.Activities.Wizard</RootNamespace>
+    <AssemblyName>Shaker.Markdown.Activities.Wizard</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shaker.Markdown.Core\Shaker.Markdown.Core.csproj" />
+    <ProjectReference Include="..\Shaker.Markdown.Activities.Design\Shaker.Markdown.Activities.Design.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The ribbon button's icon, addressed by pack URI. Regenerate with tools/make-icon.py. -->
+    <Resource Include="Resources\markdown.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Studio supplies both of these at run time, so neither travels in the package. -->
+    <PackageReference Include="UiPath.Activities.Api" Version="24.10.1" PrivateAssets="all" />
+    <PackageReference Include="UiPath.Workflow" Version="6.0.0-20240401-07" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      WebView2 is optional at run time. See WebView2Host: every use of it sits behind a probe and a
+      try/catch, so a Studio without the Evergreen runtime installed falls back to the FlowDocument
+      renderer instead of failing to open the viewer.
+    -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2957.106" />
+  </ItemGroup>
+
+</Project>

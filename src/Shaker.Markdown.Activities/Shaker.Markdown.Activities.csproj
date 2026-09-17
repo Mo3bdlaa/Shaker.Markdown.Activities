@@ -1,0 +1,146 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net461;net6.0</TargetFrameworks>
+    <RootNamespace>Shaker.Markdown.Activities</RootNamespace>
+    <AssemblyName>Shaker.Markdown.Activities</AssemblyName>
+    <PackageId>Shaker.Markdown.Activities</PackageId>
+    <Title>Markdown Activities</Title>
+    <Description>Render Markdown inside UiPath. Document a workflow with a Markdown note that Studio draws as a formatted document on the canvas — from the note itself, from the activity's annotation, or from a .md file in the project — and convert Markdown to HTML or plain text at run time.</Description>
+    <PackageTags>UiPath;RPA;activities;markdown;documentation;readme;html</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>package-icon.png</PackageIcon>
+    <PackageReleaseNotes>Markdown for UiPath: a Markdown Note that renders on the Studio canvas, reads its own annotation or a .md file in the project, plus Markdown To HTML, Markdown To Text, Read Markdown File and Get Markdown Outline, and a Markdown Viewer in Studio's ribbon for browsing the project's .md files.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      The engine travels inside this package rather than as a separate dependency, so that installing one
+      .nupkg into Studio or Orchestrator is enough to get a working activity pack. PrivateAssets keeps the
+      project reference itself out of the package metadata; the target below puts the assembly in.
+    -->
+    <ProjectReference Include="..\Shaker.Markdown.Core\Shaker.Markdown.Core.csproj" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Markdig is the one real dependency, and it is declared rather than embedded: it is somebody else's
+      library under its own licence, and a consuming project that already has it should end up with one copy
+      rather than two.
+    -->
+    <PackageReference Include="Markdig" Version="1.3.2" />
+  </ItemGroup>
+
+  <!--
+    Markdig on .NET Framework resolves to its netstandard2.0 assets, which carry System.Memory and the
+    three polyfills behind it. Those packages declare net462 as their floor, and a Windows-legacy project
+    is net461, so NuGet warns on every one of them. The warning is advisory rather than real: Studio's
+    legacy projects run on whatever .NET Framework the machine has, which on any supported Windows is
+    4.7.2 or later, and the polyfills load there. Silenced deliberately, not by accident.
+  -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <!-- Pinned rather than left transitive so the version that ships is the one that was tested. -->
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <Reference Include="System.Activities" />
+    <Reference Include="System.ComponentModel.Composition" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+    <!--
+      Compile time only: Studio and the Robot bring their own workflow runtime, and PrivateAssets keeps this
+      out of the package's dependencies so none of it lands in the consuming project.
+
+      The version matters more than it looks. This must be a build UiPath actually ships, from their official
+      feed, because the assembly version of System.Activities is what the activities are compiled to ask the
+      host for. The UiPath.Workflow packages on nuget.org carry System.Activities 6.0.3.0, which no Studio
+      has; the runtime resolves assemblies forward but never backward, so a project on the shipped 6.0.0.0
+      fails to load them with "Could not load file or assembly 'System.Activities, Version=6.0.3.0'".
+    -->
+    <PackageReference Include="UiPath.Workflow" Version="6.0.0-20240401-07" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <!-- Shown beside the package in Studio's package manager and on the Marketplace listing. -->
+    <None Include="package-icon.png" Pack="true" PackagePath="\" />
+    <!--
+      The ribbon icon travels as a file beside the viewer assembly, not only embedded in it: naming it by
+      path is the one way to reach it that does not ask WPF to resolve this assembly by name, which Studio's
+      load context defeats.
+    -->
+    <None Include="..\Shaker.Markdown.Activities.Wizard\Resources\markdown.png" Pack="true" PackagePath="lib\net6.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeMarkdownCore;IncludeLegacyDesigners;IncludeModernDesignTime</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <Target Name="IncludeMarkdownCore">
+    <ItemGroup>
+      <BuildOutputInPackage Include="$(OutputPath)Shaker.Markdown.Core.dll" />
+      <BuildOutputInPackage Include="$(OutputPath)Shaker.Markdown.Core.xml" Condition="Exists('$(OutputPath)Shaker.Markdown.Core.xml')" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Studio loads the designers from an assembly sitting beside the activities. They are design time only and
+    Windows only, so they ship with both sets of Windows assets and the cross-platform robot never sees a WPF
+    assembly. They are referenced by path rather than as a ProjectReference because the design project
+    references this one, and NuGet will not allow that circle.
+  -->
+  <PropertyGroup>
+    <LegacyDesignAssembly>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net461\Shaker.Markdown.Activities.Design.dll</LegacyDesignAssembly>
+    <ModernDesignAssembly>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net6.0-windows\Shaker.Markdown.Activities.Design.dll</ModernDesignAssembly>
+    <ViewerOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Wizard\bin\$(Configuration)\net6.0-windows\</ViewerOutput>
+    <ViewerAssembly>$(ViewerOutput)Shaker.Markdown.Activities.Wizard.dll</ViewerAssembly>
+  </PropertyGroup>
+
+  <Target Name="IncludeLegacyDesigners" Condition="'$(TargetFramework)' == 'net461'">
+    <Warning Condition="!Exists('$(LegacyDesignAssembly)')"
+             Text="Shaker.Markdown.Activities.Design.dll (net461) was not found at $(LegacyDesignAssembly), so Windows-legacy projects will show the stock designers. Build the solution before packing." />
+    <ItemGroup>
+      <BuildOutputInPackage Include="$(LegacyDesignAssembly)" Condition="Exists('$(LegacyDesignAssembly)')" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Modern Studio runs on .NET 8 and never loads the .NET Framework assets, so its designers and the ribbon
+    viewer travel with the net6.0 ones instead.
+  -->
+  <Target Name="IncludeModernDesignTime" Condition="'$(TargetFramework)' == 'net6.0'">
+    <Warning Condition="!Exists('$(ModernDesignAssembly)')"
+             Text="Shaker.Markdown.Activities.Design.dll (net6.0-windows) was not found at $(ModernDesignAssembly), so a modern Studio will show the stock designers. Build the solution before packing." />
+    <Warning Condition="!Exists('$(ViewerAssembly)')"
+             Text="Shaker.Markdown.Activities.Wizard.dll was not found at $(ViewerAssembly), so this package will ship without the Markdown viewer. Build the solution before packing." />
+    <ItemGroup>
+      <BuildOutputInPackage Include="$(ModernDesignAssembly)" Condition="Exists('$(ModernDesignAssembly)')" />
+      <BuildOutputInPackage Include="$(ViewerAssembly)" Condition="Exists('$(ViewerAssembly)')" />
+
+      <!--
+        WebView2, for the viewer window. It travels beside the viewer rather than as a dependency of this
+        package, because it is wanted by one design-time assembly and has no business being restored into
+        the automation project. The native loader goes in flat: Microsoft.Web.WebView2.Core looks for it
+        beside itself, and the runtimes/ layout it is published under means nothing once these files have
+        been lifted out of their own package.
+
+        Only the x64 loader ships. Studio is x64, and carrying three architectures to serve one would be
+        three times the size for nothing. If any of this is missing or fails to load, WebView2Host returns
+        null and the viewer renders with the same FlowDocument renderer the canvas uses, so the button still
+        works — it is fidelity that is lost, not the feature.
+      -->
+      <BuildOutputInPackage Include="$(ViewerOutput)Microsoft.Web.WebView2.Core.dll"
+                            Condition="Exists('$(ViewerOutput)Microsoft.Web.WebView2.Core.dll')" />
+      <BuildOutputInPackage Include="$(ViewerOutput)Microsoft.Web.WebView2.Wpf.dll"
+                            Condition="Exists('$(ViewerOutput)Microsoft.Web.WebView2.Wpf.dll')" />
+      <BuildOutputInPackage Include="$(ViewerOutput)runtimes\win-x64\native\WebView2Loader.dll"
+                            Condition="Exists('$(ViewerOutput)runtimes\win-x64\native\WebView2Loader.dll')" />
+    </ItemGroup>
+  </Target>
+
+</Project>
