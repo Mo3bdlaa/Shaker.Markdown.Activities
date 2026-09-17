@@ -6,8 +6,8 @@ The activity package, built and checked in so it can be installed into Studio wi
 | --- | --- |
 | File | `Shaker.Markdown.Activities.1.0.0.nupkg` |
 | Version | 1.0.0 |
-| Built from | `d0ed7366698db905b78e2859c70c0175a1ef2a73` |
-| SHA-256 | `c8476a311848cf28f93259801d1220a75bed2715aa833d59edb140b624908345` |
+| Built from | `37122bc31ed3080b05e074fe833c2342270fe0cb` |
+| SHA-256 | `d22031a55f2d03822ef382c92d1bf111c2bd8c6756926ae47e832bab9683ef84` |
 | Size | 588K |
 
 ## Installing it into Studio
