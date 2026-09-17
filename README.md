@@ -1,8 +1,8 @@
 # Shaker Markdown Activities
 
 Markdown inside UiPath. A **Markdown Note** that Studio draws as a formatted document on the canvas instead
-of as source, a **Markdown** button in the ribbon for reading the project's `.md` files, and activities that
-turn Markdown into HTML, plain text, a DataTable or a PDF while a process runs.
+of as source, and activities that turn Markdown into HTML, plain text, a DataTable or a PDF while a process
+runs.
 
 One package, `Shaker.Markdown.Activities`. Every activity in it appears under **Markdown** in the Activities
 panel — one folder, at the top level, whatever the dependency list calls the package.
@@ -22,7 +22,6 @@ here goes through one of those, which decides what was possible and what was not
 | Replace the built-in **Comment** activity's rendering | **No.** `UiPath.Core.Activities.Comment` is sealed and its designer is fixed. Use `Markdown Note`, which is the same idea with a renderer. |
 | Render a `.md` file **on the canvas** | **Yes.** Set `Source` to `File` and point it at a file in the project. |
 | Open a `.md` file as a **Studio editor tab** | **No.** `IWorkflowDesignApi` offers wizards, settings and analyzer rules — nothing that owns a file type or an editor tab. |
-| Browse and read the project's `.md` files | **Yes**, through the ribbon button, which is the closest a package can get to the row above. |
 | Convert Markdown at run time | **Yes.** To HTML, to plain text, to a DataTable, to a PDF. |
 | Show a rendered document to a person mid-process | **Yes**, from the Windows package. |
 
@@ -71,26 +70,35 @@ than one per keystroke.
 
 ## Project types
 
-| Project type | Activities | Rendered note on the canvas | Ribbon viewer | Show Markdown / To PDF |
+| Project type | Resolves | Activities | Rendered note on the canvas | Show Markdown / To PDF |
 |---|---|---|---|---|
-| Windows (.NET 8) | Yes | Yes | Yes | Yes |
-| Windows – Legacy (.NET Framework) | Yes | Yes | No | Yes |
-| Cross-platform | Yes | No — shown in the properties panel instead | No | No |
+| Windows (.NET 8) | `lib/net6.0-windows7.0` | Yes | Yes | Yes |
+| Windows – Legacy (.NET Framework) | `lib/net461` | Yes | Yes | Yes |
+| Cross-platform | `lib/net6.0` | Yes | No — shown in the properties panel instead | No |
 
 The designers are WPF, so they exist only where Studio is. A cross-platform project still gets every
 activity and a `Markdown Note` still carries its text; what it loses is the drawing. That is why the
 package ships three sets of assemblies:
 
 ```
-lib/net461/   activities, engine, .NET Framework designers,
-              Show Markdown + Markdown To PDF, WebView2       → Windows-legacy Studio
-lib/net6.0/   activities, engine, .NET designers, the viewer,
-              Show Markdown + Markdown To PDF, WebView2       → modern Studio, and the robot
+lib/net461/              activities, engine, designers,
+                         Show Markdown + Markdown To PDF, WebView2   → Windows-legacy Studio
+lib/net6.0-windows7.0/   the same, built for .NET                    → Windows Studio
+lib/net6.0/              activities and engine only, nothing WPF     → cross-platform, and a Linux robot
 ```
 
-One WebView2 build serves both, pinned to `1.0.2478.35` — later releases dropped their .NET Framework
-assets, and two versions in one package would mean a Windows-legacy build running against an assembly that
-is not the one beside it. CI asserts the whole layout.
+**Which folder Studio resolves is load-bearing, and getting it wrong fails quietly.** A Studio *Windows*
+project resolves `lib/net6.0-windows7.0`. An earlier version of this package shipped the designers in
+`lib/net6.0`, so Studio never loaded them — and with no design assembly there is no Activities panel folder
+and no icon, which is how the pack ended up under a tree named after its own assembly. Offering all three
+folders is what works, which is the layout `Shaker.SQLLiteDB.Activities` settled on for the same reason.
+
+`lib/net6.0` must stay free of WPF: it is what a cross-platform project and a Linux robot resolve, and
+neither can load it. CI asserts both halves of that.
+
+One WebView2 build serves both Windows folders, pinned to `1.0.2478.35` — later releases dropped their .NET
+Framework assets, and two versions in one package would mean a Windows-legacy build running against an
+assembly that is not the one beside it.
 
 ## Rendering
 
@@ -101,19 +109,19 @@ every keystroke and a workflow may hold a dozen of them, so a browser control pe
 process each. Headings, emphasis, lists, task lists, quotes, code blocks, tables, links, footnotes and local
 images all render. Raw HTML and syntax highlighting do not.
 
-**In the viewer window** — WebView2, for full fidelity, falling back to the same `FlowDocument` renderer when
-the Evergreen runtime is not installed. The status bar says which one drew what you are looking at. WebView2's
-assemblies travel beside the viewer rather than as a package dependency, so nothing is restored into your
-automation project.
+**In a window at run time** — WebView2, for full fidelity, used by `Show Markdown` and `Markdown To PDF`.
+WebView2's assemblies travel beside those activities rather than as a package dependency, so nothing is
+restored into your automation project.
 
 ### Raw HTML is off by default
 
 `AllowHtml` is off everywhere, and that is a decision rather than an oversight. Markdown reaching this
 library comes from files in a repository or from variables filled at run time, and raw HTML in either can
-carry script. The viewer additionally serves pages under a `Content-Security-Policy` that forbids script
-outright, disables WebView2's script engine, and reaches the disk through a virtual host mapped read-only to
-the one folder the document came from. Links open only `http`, `https` and `mailto`, so a document cannot
-launch a local executable through a `file://` link. Turn `AllowHtml` on for documents you wrote.
+carry script. Anything rendered through WebView2 additionally serves its page under a
+`Content-Security-Policy` that forbids script outright, disables WebView2's script engine, and reaches the
+disk through a virtual host mapped read-only to the one folder the document came from. Links in a note open
+only `http`, `https` and `mailto`, so a document cannot launch a local executable through a `file://` link.
+Turn `AllowHtml` on for documents you wrote.
 
 ## Building
 
@@ -133,9 +141,9 @@ from their own output folders, and packing without them succeeds with a warning 
 
 ```
 src/Shaker.Markdown.Core               netstandard2.0     parsing and rendering, no UiPath and no WPF
-src/Shaker.Markdown.Activities         net461;net6.0      the activities
-src/Shaker.Markdown.Activities.Design  net461;net6.0-win  the canvas designers
-src/Shaker.Markdown.Activities.Wizard  net6.0-windows     the ribbon viewer
+src/Shaker.Markdown.Activities         net461;net6.0;     the activities, and the package itself
+                                       net6.0-windows
+src/Shaker.Markdown.Activities.Design  net461;net6.0-win  the canvas designer, the panel folder, the icons
 src/…Activities.Windows                net461;net6.0-win  Show Markdown and Markdown To PDF
 src/…Activities.Windows.Design         net461;net6.0-win  their panel folder and icons
 stubs/                                 net6.0-windows     stand-ins for the designer assemblies Studio owns
@@ -152,24 +160,30 @@ compile time with the identities Studio loads, and are never shipped. See `stubs
 Both of these are how Studio actually behaves rather than how it looks like it should, and both cost this
 repo a round trip.
 
-**The Activities panel folder comes from the attribute table, not from the activity class.** A
-`[Category("Markdown")]` on the class is read for the *properties* panel and ignored for the Activities
-panel, which without other instruction groups activities by package id — and splits it on the dots, so
-`Shaker.Markdown.Activities` became *Shaker ▸ Markdown*. The folder is set by registering the attribute in
-`IRegisterMetadata`:
+**The Activities panel folder is a `[Category]` on the activity class.** Dots nest it, so one name with no
+dots is one folder at the top level:
 
 ```csharp
-builder.AddCustomAttributes(typeof(MarkdownNote), new CategoryAttribute("Markdown"));
+[Category("Markdown")]
+[DisplayName("Markdown Note")]
+public sealed class MarkdownNote : CodeActivity
 ```
 
-Dots nest there too, so one name with no dots is one folder at the top level. This is registered for every
-activity in `DesignerMetadata` and `WindowsDesignerMetadata`.
+`DesignerMetadata` registers the same `CategoryAttribute` through the attribute table as well, which is what
+UiPath's own `Community.Activities` does. Either route works; both are kept because they cost nothing and
+the failure mode — a pack filed under its own assembly name — is not obvious from Studio.
+
+Both routes need the design assembly to be **in the lib folder Studio resolves**. That is the part that
+actually bit this repo; see the layout section above.
 
 **Icons come from `Themes/Icons.xaml`, not from the designer.** Setting `ActivityDesigner.Icon` in a
 designer's constructor does not put an icon in the Activities panel. Studio looks up a `DrawingBrush` by the
 key `<ActivityName>Icon` in the design assembly, so the icons live in
 `src/Shaker.Markdown.Activities.Design/Themes/Icons.xaml` and its Windows counterpart, keyed by activity type
-name. A renamed activity silently loses its icon, so CI checks that every activity still has one.
+name. `Themes/Generic.xaml` merges that dictionary and `ThemeInfo` in `AssemblyInfo.cs` points WPF at it, so
+a lookup finds the brushes whether the host asks the generic dictionary or loads `Icons.xaml` by pack URI.
+
+A renamed activity silently loses its icon, so CI checks that every activity still has one.
 
 Because Studio applies those icons by name, the converters keep UiPath's own card rather than a custom
 designer — only the note needs one, and it needs one for the rendering, not the icon.
@@ -186,9 +200,8 @@ take the package down with them:
 - **Reading a literal out of an argument.** The card's editor needs the text behind an `InArgument<string>`
   before anything has run. A `Literal<string>` is read directly; a VB or C# expression that is nothing but a
   quoted string is unquoted; anything else is left alone and reported as an expression.
-- **Finding the project folder.** Needed to resolve a note's relative file path and to list files for the
-  viewer. Taken from the editing context and the project properties service by reflection, falling back to
-  the working directory on the canvas and to an *Open file* button in the viewer.
+- **Finding the project folder.** Needed to resolve a note's relative file path. Taken from the editing
+  context by reflection, falling back to the working directory.
 
 ## Licence
 

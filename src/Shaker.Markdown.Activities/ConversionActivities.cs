@@ -35,6 +35,7 @@ namespace Shaker.Markdown.Activities
     }
 
     /// <summary>Renders Markdown to HTML.</summary>
+    [Category(Categories.Markdown)]
     [DisplayName("Markdown To HTML")]
     [Description("Renders Markdown to HTML, either as a fragment to drop into an email body or as a complete styled page.")]
     public sealed class MarkdownToHtml : MarkdownActivityBase<string>
@@ -92,6 +93,7 @@ namespace Shaker.Markdown.Activities
     }
 
     /// <summary>Strips Markdown down to its words.</summary>
+    [Category(Categories.Markdown)]
     [DisplayName("Markdown To Text")]
     [Description("Strips the markup out of Markdown, leaving the words. Useful for a log line, a subject line or a plain-text email part.")]
     public sealed class MarkdownToText : MarkdownActivityBase<string>
@@ -111,6 +113,7 @@ namespace Shaker.Markdown.Activities
     }
 
     /// <summary>Reads a <c>.md</c> file from disk.</summary>
+    [Category(Categories.Markdown)]
     [DisplayName("Read Markdown File")]
     [Description("Reads a .md file and reports its text, its title and how many headings it has.")]
     public sealed class ReadMarkdownFile : MarkdownActivityBase<string>
@@ -158,6 +161,7 @@ namespace Shaker.Markdown.Activities
     }
 
     /// <summary>Lists a document's headings.</summary>
+    [Category(Categories.Markdown)]
     [DisplayName("Get Markdown Outline")]
     [Description("Lists a document's headings in order, for building a table of contents or checking that a template was filled in.")]
     public sealed class GetMarkdownOutline : MarkdownActivityBase<IList<MarkdownHeading>>

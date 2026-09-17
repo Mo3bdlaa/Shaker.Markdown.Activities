@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Draws the package and ribbon icons: the Markdown mark, a rounded outline around an M and a caret.
+"""Draws the package icon: the Markdown mark, a rounded outline around an M and a caret.
 
-Kept as a script rather than a checked-in binary alone so the icons can be regenerated at another size or
+Kept as a script rather than a checked-in binary alone so the icon can be regenerated at another size or
 colour without a drawing program. Run it from the repository root:
 
     python3 tools/make-icon.py
@@ -101,9 +101,7 @@ def main():
     draw_m(px, left=24, top=44, height=40, stroke=8)
     draw_caret(px, cx=88, top=44, height=40, stroke=8)
 
-    for path in ("src/Shaker.Markdown.Activities/package-icon.png",
-                 "src/Shaker.Markdown.Activities.Wizard/Resources/markdown.png"):
-        write_png(path, px)
+    write_png("src/Shaker.Markdown.Activities/package-icon.png", px)
 
 
 if __name__ == "__main__":

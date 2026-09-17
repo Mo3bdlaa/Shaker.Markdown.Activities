@@ -1,0 +1,18 @@
+<!--
+  The assembly's generic theme dictionary.
+
+  This exists so the icon brushes are reachable through the route WPF looks for them on by default.
+  ThemeInfo in AssemblyInfo.cs points the framework at this file as the source-assembly generic
+  dictionary, and merging Icons.xaml into it means a lookup of "<ActivityName>Icon" finds the brush
+  whether the host asks this dictionary for it or loads Themes/Icons.xaml by pack URI itself.
+
+  Styles belong here too if any are ever needed. It holds nothing but the merge for now, on purpose.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceDictionary Source="/Shaker.Markdown.Activities.Windows.Design;component/Themes/Icons.xaml" />
+  </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

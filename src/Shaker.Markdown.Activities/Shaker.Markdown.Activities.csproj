@@ -1,16 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net461;net6.0</TargetFrameworks>
+    <!--
+      net461            => UiPath "Windows - Legacy" projects
+      net6.0-windows    => UiPath "Windows" projects, and what the designers ship with
+      net6.0            => the frameworkless fallback, for cross-platform projects and a host that
+                           resolves without the Windows flavour
+
+      All three, which is the layout Shaker.SQLLiteDB.Activities ships and Studio installs happily. This
+      package previously offered net461 and net6.0 only, with the designers in lib/net6.0 — and a Studio
+      "Windows" project resolves lib/net6.0-windows7.0, so it never loaded them. That is what put the
+      activities in a folder named after the assembly instead of their own, and left them without icons.
+    -->
+    <TargetFrameworks>net461;net6.0;net6.0-windows</TargetFrameworks>
+    <!-- The designers and the Windows activities are WPF; building them from Linux needs this switch. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Shaker.Markdown.Activities</RootNamespace>
     <AssemblyName>Shaker.Markdown.Activities</AssemblyName>
+    <AssemblyTitle>Shaker Markdown Activities</AssemblyTitle>
     <PackageId>Shaker.Markdown.Activities</PackageId>
     <Title>Shaker Markdown Activities</Title>
-    <Description>Render Markdown inside UiPath. Document a workflow with a Markdown note that Studio draws as a formatted document on the canvas — from the note itself, from the activity's annotation, or from a .md file in the project — and convert Markdown to HTML or plain text at run time.</Description>
-    <PackageTags>UiPath;RPA;activities;markdown;documentation;readme;html</PackageTags>
+    <Description>Render Markdown inside UiPath. Document a workflow with a Markdown note that Studio draws as a formatted document on the canvas — from the note itself, from the activity's annotation, or from a .md file in the project — and convert Markdown to HTML, plain text, a DataTable or a PDF at run time.</Description>
+    <PackageTags>UiPath;RPA;activities;markdown;documentation;readme;html;pdf;datatable</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>package-icon.png</PackageIcon>
-    <PackageReleaseNotes>Shaker Markdown Activities: a Markdown Note that renders on the Studio canvas, reads its own annotation or a .md file in the project, plus Markdown To HTML, Markdown To Text, Read Markdown File and Get Markdown Outline, and a Markdown Viewer in Studio's ribbon for browsing the project's .md files.</PackageReleaseNotes>
+    <PackageReleaseNotes>Shaker Markdown Activities: a Markdown Note that renders on the Studio canvas and reads its own annotation or a .md file in the project, plus Markdown To HTML, Markdown To Text, Read Markdown File, Get Markdown Outline, Get DataTable From Markdown, and — on Windows — Show Markdown and Markdown To PDF. Every activity appears under Markdown in the Activities panel.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
@@ -28,6 +42,10 @@
       Markdig is the one real dependency, and it is declared rather than embedded: it is somebody else's
       library under its own licence, and a consuming project that already has it should end up with one copy
       rather than two.
+
+      It also matters that the package keeps a <dependencies> element at all. Studio reads the target
+      framework groups in there to decide which project types the package supports, and a package with no
+      element is reported as compatible with nothing.
     -->
     <PackageReference Include="Markdig" Version="1.3.2" />
   </ItemGroup>
@@ -51,7 +69,7 @@
     <Reference Include="System.ComponentModel.Composition" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net461'">
     <!--
       Compile time only: Studio and the Robot bring their own workflow runtime, and PrivateAssets keeps this
       out of the package's dependencies so none of it lands in the consuming project.
@@ -69,16 +87,11 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <!-- Shown beside the package in Studio's package manager and on the Marketplace listing. -->
     <None Include="package-icon.png" Pack="true" PackagePath="\" />
-    <!--
-      The ribbon icon travels as a file beside the viewer assembly, not only embedded in it: naming it by
-      path is the one way to reach it that does not ask WPF to resolve this assembly by name, which Studio's
-      load context defeats.
-    -->
-    <None Include="..\Shaker.Markdown.Activities.Wizard\Resources\markdown.png" Pack="true" PackagePath="lib\net6.0" />
   </ItemGroup>
 
+  <!-- The engine, beside the activities, in every lib folder. -->
   <PropertyGroup>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeMarkdownCore;IncludeLegacyDesigners;IncludeModernDesignTime</TargetsForTfmSpecificBuildOutput>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeMarkdownCore</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
 
   <Target Name="IncludeMarkdownCore">
@@ -89,78 +102,53 @@
   </Target>
 
   <!--
-    Studio loads the designers from an assembly sitting beside the activities. They are design time only and
-    Windows only, so they ship with both sets of Windows assets and the cross-platform robot never sees a WPF
-    assembly. They are referenced by path rather than as a ProjectReference because the design project
-    references this one, and NuGet will not allow that circle.
+    The WPF assemblies: the designers, the two activities that put a window on screen, and the browser they
+    render through. They go into the two Windows lib folders only — lib/net6.0 is the frameworkless fallback
+    and must not carry WPF, or a cross-platform robot would be asked to load it.
+
+    Referenced by path rather than as ProjectReferences because those projects reference this one, and NuGet
+    will not allow that circle. Build the solution before packing; the target below says so if you did not.
   -->
   <PropertyGroup>
-    <LegacyDesignAssembly>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net461\Shaker.Markdown.Activities.Design.dll</LegacyDesignAssembly>
-    <ModernDesignAssembly>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net6.0-windows\Shaker.Markdown.Activities.Design.dll</ModernDesignAssembly>
-    <ViewerOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Wizard\bin\$(Configuration)\net6.0-windows\</ViewerOutput>
-    <ViewerAssembly>$(ViewerOutput)Shaker.Markdown.Activities.Wizard.dll</ViewerAssembly>
-    <LegacyWindowsOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows\bin\$(Configuration)\net461\</LegacyWindowsOutput>
-    <ModernWindowsOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows\bin\$(Configuration)\net6.0-windows\</ModernWindowsOutput>
-    <LegacyWindowsDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net461\Shaker.Markdown.Activities.Windows.Design.dll</LegacyWindowsDesign>
-    <ModernWindowsDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net6.0-windows\Shaker.Markdown.Activities.Windows.Design.dll</ModernWindowsDesign>
+    <LegacyDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net461\</LegacyDesign>
+    <ModernDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net6.0-windows\</ModernDesign>
+    <LegacyWindows>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows\bin\$(Configuration)\net461\</LegacyWindows>
+    <ModernWindows>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows\bin\$(Configuration)\net6.0-windows\</ModernWindows>
+    <LegacyWindowsDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net461\</LegacyWindowsDesign>
+    <ModernWindowsDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net6.0-windows\</ModernWindowsDesign>
   </PropertyGroup>
 
-  <Target Name="IncludeLegacyDesigners" Condition="'$(TargetFramework)' == 'net461'">
-    <Warning Condition="!Exists('$(LegacyDesignAssembly)')"
-             Text="Shaker.Markdown.Activities.Design.dll (net461) was not found at $(LegacyDesignAssembly), so Windows-legacy projects will show the stock designers. Build the solution before packing." />
-    <Warning Condition="!Exists('$(LegacyWindowsOutput)Shaker.Markdown.Activities.Windows.dll')"
-             Text="Shaker.Markdown.Activities.Windows.dll (net461) was not found, so Windows-legacy projects will not get Show Markdown or Markdown To PDF. Build the solution before packing." />
-    <ItemGroup>
-      <BuildOutputInPackage Include="$(LegacyDesignAssembly)" Condition="Exists('$(LegacyDesignAssembly)')" />
-      <BuildOutputInPackage Include="$(LegacyWindowsOutput)Shaker.Markdown.Activities.Windows.dll"
-                            Condition="Exists('$(LegacyWindowsOutput)Shaker.Markdown.Activities.Windows.dll')" />
-      <BuildOutputInPackage Include="$(LegacyWindowsDesign)" Condition="Exists('$(LegacyWindowsDesign)')" />
-      <BuildOutputInPackage Include="$(LegacyWindowsOutput)Microsoft.Web.WebView2.Core.dll"
-                            Condition="Exists('$(LegacyWindowsOutput)Microsoft.Web.WebView2.Core.dll')" />
-      <BuildOutputInPackage Include="$(LegacyWindowsOutput)Microsoft.Web.WebView2.Wpf.dll"
-                            Condition="Exists('$(LegacyWindowsOutput)Microsoft.Web.WebView2.Wpf.dll')" />
-      <BuildOutputInPackage Include="$(LegacyWindowsOutput)runtimes\win-x64\native\WebView2Loader.dll"
-                            Condition="Exists('$(LegacyWindowsOutput)runtimes\win-x64\native\WebView2Loader.dll')" />
-    </ItemGroup>
-  </Target>
+  <ItemGroup>
+    <!-- Windows - Legacy -->
+    <None Include="$(LegacyDesign)Shaker.Markdown.Activities.Design.dll" Pack="true" PackagePath="lib/net461/" Visible="false" />
+    <None Include="$(LegacyWindows)Shaker.Markdown.Activities.Windows.dll" Pack="true" PackagePath="lib/net461/" Visible="false" />
+    <None Include="$(LegacyWindowsDesign)Shaker.Markdown.Activities.Windows.Design.dll" Pack="true" PackagePath="lib/net461/" Visible="false" />
+    <None Include="$(LegacyWindows)Microsoft.Web.WebView2.Core.dll" Pack="true" PackagePath="lib/net461/" Visible="false" />
+    <None Include="$(LegacyWindows)Microsoft.Web.WebView2.Wpf.dll" Pack="true" PackagePath="lib/net461/" Visible="false" />
+    <None Include="$(LegacyWindows)runtimes\win-x64\native\WebView2Loader.dll" Pack="true" PackagePath="lib/net461/" Visible="false" />
+
+    <!-- Windows -->
+    <None Include="$(ModernDesign)Shaker.Markdown.Activities.Design.dll" Pack="true" PackagePath="lib/net6.0-windows7.0/" Visible="false" />
+    <None Include="$(ModernWindows)Shaker.Markdown.Activities.Windows.dll" Pack="true" PackagePath="lib/net6.0-windows7.0/" Visible="false" />
+    <None Include="$(ModernWindowsDesign)Shaker.Markdown.Activities.Windows.Design.dll" Pack="true" PackagePath="lib/net6.0-windows7.0/" Visible="false" />
+    <None Include="$(ModernWindows)Microsoft.Web.WebView2.Core.dll" Pack="true" PackagePath="lib/net6.0-windows7.0/" Visible="false" />
+    <None Include="$(ModernWindows)Microsoft.Web.WebView2.Wpf.dll" Pack="true" PackagePath="lib/net6.0-windows7.0/" Visible="false" />
+    <None Include="$(ModernWindows)runtimes\win-x64\native\WebView2Loader.dll" Pack="true" PackagePath="lib/net6.0-windows7.0/" Visible="false" />
+  </ItemGroup>
 
   <!--
-    Modern Studio runs on .NET 8 and never loads the .NET Framework assets, so its designers and the ribbon
-    viewer travel with the net6.0 ones instead.
+    A missing file above is skipped silently by pack, which would ship a package that installs and then does
+    nothing visible in Studio. Say so instead.
   -->
-  <Target Name="IncludeModernDesignTime" Condition="'$(TargetFramework)' == 'net6.0'">
-    <Warning Condition="!Exists('$(ModernDesignAssembly)')"
-             Text="Shaker.Markdown.Activities.Design.dll (net6.0-windows) was not found at $(ModernDesignAssembly), so a modern Studio will show the stock designers. Build the solution before packing." />
-    <Warning Condition="!Exists('$(ViewerAssembly)')"
-             Text="Shaker.Markdown.Activities.Wizard.dll was not found at $(ViewerAssembly), so this package will ship without the Markdown viewer. Build the solution before packing." />
-    <ItemGroup>
-      <BuildOutputInPackage Include="$(ModernDesignAssembly)" Condition="Exists('$(ModernDesignAssembly)')" />
-      <BuildOutputInPackage Include="$(ViewerAssembly)" Condition="Exists('$(ViewerAssembly)')" />
-
-      <!--
-        WebView2, for the viewer window. It travels beside the viewer rather than as a dependency of this
-        package, because it is wanted by one design-time assembly and has no business being restored into
-        the automation project. The native loader goes in flat: Microsoft.Web.WebView2.Core looks for it
-        beside itself, and the runtimes/ layout it is published under means nothing once these files have
-        been lifted out of their own package.
-
-        Only the x64 loader ships. Studio is x64, and carrying three architectures to serve one would be
-        three times the size for nothing. If any of this is missing or fails to load, WebView2Host returns
-        null and the viewer renders with the same FlowDocument renderer the canvas uses, so the button still
-        works — it is fidelity that is lost, not the feature.
-      -->
-      <BuildOutputInPackage Include="$(ViewerOutput)Microsoft.Web.WebView2.Core.dll"
-                            Condition="Exists('$(ViewerOutput)Microsoft.Web.WebView2.Core.dll')" />
-      <BuildOutputInPackage Include="$(ViewerOutput)Microsoft.Web.WebView2.Wpf.dll"
-                            Condition="Exists('$(ViewerOutput)Microsoft.Web.WebView2.Wpf.dll')" />
-      <BuildOutputInPackage Include="$(ViewerOutput)runtimes\win-x64\native\WebView2Loader.dll"
-                            Condition="Exists('$(ViewerOutput)runtimes\win-x64\native\WebView2Loader.dll')" />
-
-      <!-- Show Markdown and Markdown To PDF, and the icons for them. -->
-      <BuildOutputInPackage Include="$(ModernWindowsOutput)Shaker.Markdown.Activities.Windows.dll"
-                            Condition="Exists('$(ModernWindowsOutput)Shaker.Markdown.Activities.Windows.dll')" />
-      <BuildOutputInPackage Include="$(ModernWindowsDesign)" Condition="Exists('$(ModernWindowsDesign)')" />
-    </ItemGroup>
+  <Target Name="WarnOnMissingWindowsAssets" BeforeTargets="GenerateNuspec">
+    <Warning Condition="!Exists('$(ModernDesign)Shaker.Markdown.Activities.Design.dll')"
+             Text="The .NET build of the designers was not found at $(ModernDesign). A Windows project would install this package and show no icons, no Markdown folder and no rendered note. Build the solution before packing." />
+    <Warning Condition="!Exists('$(LegacyDesign)Shaker.Markdown.Activities.Design.dll')"
+             Text="The .NET Framework build of the designers was not found at $(LegacyDesign), so Windows-legacy projects will show the stock designers. Build the solution before packing." />
+    <Warning Condition="!Exists('$(ModernWindows)Shaker.Markdown.Activities.Windows.dll')"
+             Text="The .NET build of the Windows activities was not found at $(ModernWindows), so Show Markdown and Markdown To PDF will be missing. Build the solution before packing." />
+    <Warning Condition="!Exists('$(ModernWindows)Microsoft.Web.WebView2.Core.dll')"
+             Text="WebView2 was not found at $(ModernWindows), so Show Markdown and Markdown To PDF would fail at run time. Build the solution before packing." />
   </Target>
 
 </Project>

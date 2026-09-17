@@ -51,7 +51,9 @@ jobs:
           exit $missing
 
       # Packing without the designers is only a warning, and warnings do not fail a build, so the shape of
-      # the package is asserted here instead.
+      # the package is asserted here instead. This layout is load-bearing: a Studio "Windows" project
+      # resolves lib/net6.0-windows7.0, so designers that sit only in lib/net6.0 are never loaded, and the
+      # activities then land in a folder named after the assembly with no icons.
       - name: Verify package layout
         run: |
           set -euo pipefail
@@ -66,16 +68,15 @@ jobs:
             fi
           }
 
-          # One package, and both generations of Studio get everything they can run.
-          for tfm in net461 net6.0; do
-            # The activities and the engine.
+          # Three lib folders: Windows-legacy, Windows, and the frameworkless fallback.
+          for tfm in net461 net6.0 net6.0-windows7.0; do
             expect "lib/$tfm/Shaker.Markdown.Activities.dll"
             expect "lib/$tfm/Shaker.Markdown.Core.dll"
+          done
 
-            # The designers, which carry the canvas card, the Activities panel folder and the icons.
+          # The WPF half, in the two folders a Studio actually resolves and nowhere else.
+          for tfm in net461 net6.0-windows7.0; do
             expect "lib/$tfm/Shaker.Markdown.Activities.Design.dll"
-
-            # Show Markdown and Markdown To PDF, with the browser they render through.
             expect "lib/$tfm/Shaker.Markdown.Activities.Windows.dll"
             expect "lib/$tfm/Shaker.Markdown.Activities.Windows.Design.dll"
             expect "lib/$tfm/Microsoft.Web.WebView2.Core.dll"
@@ -83,27 +84,31 @@ jobs:
             expect "lib/$tfm/WebView2Loader.dll"
           done
 
-          # The ribbon viewer, which only modern Studio loads, and its icon. The icon is named by path
-          # rather than by pack URI, so the file has to sit beside the assembly.
-          expect "lib/net6.0/Shaker.Markdown.Activities.Wizard.dll"
-          expect "lib/net6.0/markdown.png"
-
-          # One WebView2, not two: a Windows-legacy build must not be running against an assembly of a
-          # different version from the one sitting beside it.
-          versions=$(unzip -p "$package" "lib/*/Microsoft.Web.WebView2.Core.dll" | wc -c)
-          if [ "$versions" -eq 0 ]; then
-            echo "::error::WebView2 was expected in the package"
-            exit 1
-          fi
+          # lib/net6.0 is what a cross-platform project and a Linux robot resolve. Nothing WPF may be in it.
+          for wpf in Shaker.Markdown.Activities.Design.dll Shaker.Markdown.Activities.Windows.dll \
+                     Shaker.Markdown.Activities.Windows.Design.dll Microsoft.Web.WebView2.Core.dll \
+                     Microsoft.Web.WebView2.Wpf.dll WebView2Loader.dll; do
+            if grep -q "lib/net6.0/$wpf" <<<"$contents"; then
+              echo "::error::lib/net6.0 must not carry $wpf; a cross-platform robot cannot load WPF"
+              exit 1
+            fi
+          done
 
           nuspec=$(unzip -p "$package" "*.nuspec")
 
+          # Studio reads the target framework groups here to decide which project types the package
+          # supports, so all three have to be present or it reports the package as incompatible.
+          for group in '"'"'targetFramework=".NETFramework4.6.1"'"'"' '"'"'targetFramework="net6.0"'"'"' '"'"'targetFramework="net6.0-windows7.0"'"'"'; do
+            if ! grep -q "$group" <<<"$nuspec"; then
+              echo "::error::The package manifest is missing the dependency group $group"
+              echo "$nuspec"
+              exit 1
+            fi
+          done
+
           # Studio and the Robot provide the workflow runtime. Depending on it here would install a second
-          # copy beside the host's, which breaks loading System.Activities in a Windows project.
-          #
-          # WebView2 and the Studio API are carried rather than depended on for the same reason a
-          # cross-platform project should not have them: neither belongs in an automation project's
-          # dependency graph.
+          # copy beside the host's, which breaks loading System.Activities in a Windows project. WebView2 is
+          # carried rather than depended on for the same reason a cross-platform project should not have it.
           for unwanted in UiPath.Workflow UiPath.Activities.Api Microsoft.Web.WebView2; do
             if grep -q "id=\"$unwanted\"" <<<"$nuspec"; then
               echo "::error::The package must not depend on $unwanted"

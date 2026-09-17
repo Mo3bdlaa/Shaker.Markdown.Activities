@@ -93,6 +93,7 @@ namespace Shaker.Markdown.Activities.Windows
     }
 
     /// <summary>Shows a Markdown document to whoever is at the machine.</summary>
+    [Category(Categories.Markdown)]
     [DisplayName("Show Markdown")]
     [Description("Shows rendered Markdown in a window and waits until it is closed. Attended only — it needs somebody at the machine.")]
     public sealed class ShowMarkdown : MarkdownWindowActivity<bool>
@@ -159,6 +160,7 @@ namespace Shaker.Markdown.Activities.Windows
     }
 
     /// <summary>Prints a Markdown document to a PDF file.</summary>
+    [Category(Categories.Markdown)]
     [DisplayName("Markdown To PDF")]
     [Description("Renders Markdown and prints it to a PDF file. Needs the WebView2 runtime, which does the printing.")]
     public sealed class MarkdownToPdf : MarkdownWindowActivity<string>
