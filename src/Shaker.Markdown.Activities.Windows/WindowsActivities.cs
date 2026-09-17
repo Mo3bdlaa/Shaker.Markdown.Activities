@@ -5,24 +5,10 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using Shaker.Markdown.Core;
+using Categories = Shaker.Markdown.Activities.Categories;
 
 namespace Shaker.Markdown.Activities.Windows
 {
-    /// <summary>The names the properties panel and the activities panel group by.</summary>
-    internal static class Categories
-    {
-        /// <summary>
-        /// The same folder the rest of the pack sits in, so installing the sibling package adds activities
-        /// to the Markdown folder rather than starting a second one beside it.
-        /// </summary>
-        internal const string Markdown = "Markdown";
-
-        internal const string Input = "Input";
-        internal const string Output = "Output";
-        internal const string Options = "Options";
-        internal const string Appearance = "Appearance";
-    }
-
     /// <summary>Convenience helpers for arguments a workflow may simply have left unbound.</summary>
     internal static class ArgumentExtensions
     {
@@ -107,7 +93,6 @@ namespace Shaker.Markdown.Activities.Windows
     }
 
     /// <summary>Shows a Markdown document to whoever is at the machine.</summary>
-    [Category(Categories.Markdown)]
     [DisplayName("Show Markdown")]
     [Description("Shows rendered Markdown in a window and waits until it is closed. Attended only — it needs somebody at the machine.")]
     public sealed class ShowMarkdown : MarkdownWindowActivity<bool>
@@ -174,7 +159,6 @@ namespace Shaker.Markdown.Activities.Windows
     }
 
     /// <summary>Prints a Markdown document to a PDF file.</summary>
-    [Category(Categories.Markdown)]
     [DisplayName("Markdown To PDF")]
     [Description("Renders Markdown and prints it to a PDF file. Needs the WebView2 runtime, which does the printing.")]
     public sealed class MarkdownToPdf : MarkdownWindowActivity<string>

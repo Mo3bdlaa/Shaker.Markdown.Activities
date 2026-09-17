@@ -33,15 +33,8 @@ namespace Shaker.Markdown.Activities.Design
         /// <summary>Builds the card. Studio creates one of these per note on the canvas.</summary>
         public MarkdownNoteDesigner()
         {
-            try
-            {
-                Icon = Glyphs.For(nameof(MarkdownNote));
-            }
-            catch (Exception exception)
-            {
-                Debug.WriteLine("Markdown note icon could not be built: " + exception);
-            }
-
+            // No Icon here: Studio finds MarkdownNoteIcon in Themes/Icons.xaml by name, the same way it does
+            // for the activities that kept the stock card.
             _caption = new TextBlock
             {
                 FontSize = 10.5,

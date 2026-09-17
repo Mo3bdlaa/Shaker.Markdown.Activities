@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Design time only, and it only ever loads in a modern Studio, like the package it belongs to. -->
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <!-- Design time only. Two targets, one for each generation of Studio, like the other design assembly. -->
+    <TargetFrameworks>net461;net6.0-windows</TargetFrameworks>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Shaker.Markdown.Activities.Windows.Design</RootNamespace>
@@ -11,13 +11,22 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Shaker.Markdown.Activities.Windows\Shaker.Markdown.Activities.Windows.csproj" />
-    <!-- The icons themselves live with the base package's designers, so the two packages draw one family. -->
-    <ProjectReference Include="..\Shaker.Markdown.Activities.Design\Shaker.Markdown.Activities.Design.csproj" />
-  </ItemGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Shaker.Markdown.Activities.Windows\Shaker.Markdown.Activities.Windows.csproj" />
+    <ProjectReference Include="..\Shaker.Markdown.Activities\Shaker.Markdown.Activities.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Activities" />
+    <Reference Include="System.Activities.Presentation" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0-windows'">
     <PackageReference Include="UiPath.Workflow" Version="6.0.0-20240401-07" PrivateAssets="all" />
     <ProjectReference Include="..\..\stubs\System.Activities.Metadata\System.Activities.Metadata.csproj" Private="false" />
     <ProjectReference Include="..\..\stubs\System.Activities.Presentation\System.Activities.Presentation.csproj" Private="false" />

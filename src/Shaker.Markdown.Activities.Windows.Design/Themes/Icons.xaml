@@ -1,0 +1,71 @@
+<!--
+  The activity icons.
+
+  Studio looks a DrawingBrush up by the key "<ActivityName>Icon" when it draws an activity in the
+  Activities panel and on the canvas, so the keys here have to match the activity type names exactly. This
+  file is the one definition of them: Glyphs.cs loads the brushes from here rather than building a second
+  set in code.
+
+  Every icon is a document page with an accent mark saying what the activity does to it, so the pack reads
+  as one family while each activity is still told apart at a glance. The note keeps the Markdown mark
+  itself, since it is the one activity that shows a document rather than converting one.
+
+  The transparent square in each icon is load-bearing: it fixes the bounds at 16x16 so that Uniform stretch
+  scales every icon identically. Without it an icon with a smaller mark would be drawn larger.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <DrawingBrush x:Key="ShowMarkdownIcon" Stretch="Uniform">
+    <DrawingBrush.Drawing>
+      <DrawingGroup>
+      <GeometryDrawing Brush="Transparent" Geometry="M0,0 H16 V16 H0 Z" />
+      <GeometryDrawing Geometry="M3.5,1.5 H9.5 L12.5,4.5 V14.5 H3.5 Z">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF5A6B7A" Thickness="1.2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      <GeometryDrawing Geometry="M9.5,1.5 V4.5 H12.5">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF5A6B7A" Thickness="1.2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      <GeometryDrawing Geometry="M4.4,7.4 H11.8 V12.6 H4.4 Z">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF1F6FB2" Thickness="1.2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      <GeometryDrawing Brush="#FF1F6FB2" Geometry="M4.4,7.4 H11.8 V8.9 H4.4 Z" />
+      </DrawingGroup>
+    </DrawingBrush.Drawing>
+  </DrawingBrush>
+
+  <DrawingBrush x:Key="MarkdownToPdfIcon" Stretch="Uniform">
+    <DrawingBrush.Drawing>
+      <DrawingGroup>
+      <GeometryDrawing Brush="Transparent" Geometry="M0,0 H16 V16 H0 Z" />
+      <GeometryDrawing Geometry="M3.5,1.5 H9.5 L12.5,4.5 V14.5 H3.5 Z">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF5A6B7A" Thickness="1.2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      <GeometryDrawing Geometry="M9.5,1.5 V4.5 H12.5">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF5A6B7A" Thickness="1.2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      <GeometryDrawing Geometry="M8,6.8 V10.6 M6.2,8.9 L8,10.9 L9.8,8.9">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF1F6FB2" Thickness="1.4" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      <GeometryDrawing Geometry="M5,12.8 H11">
+        <GeometryDrawing.Pen>
+          <Pen Brush="#FF1F6FB2" Thickness="1.4" StartLineCap="Round" EndLineCap="Round" LineJoin="Round" />
+        </GeometryDrawing.Pen>
+      </GeometryDrawing>
+      </DrawingGroup>
+    </DrawingBrush.Drawing>
+  </DrawingBrush>
+
+</ResourceDictionary>

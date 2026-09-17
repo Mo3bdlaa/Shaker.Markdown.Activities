@@ -99,13 +99,28 @@
     <ModernDesignAssembly>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Design\bin\$(Configuration)\net6.0-windows\Shaker.Markdown.Activities.Design.dll</ModernDesignAssembly>
     <ViewerOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Wizard\bin\$(Configuration)\net6.0-windows\</ViewerOutput>
     <ViewerAssembly>$(ViewerOutput)Shaker.Markdown.Activities.Wizard.dll</ViewerAssembly>
+    <LegacyWindowsOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows\bin\$(Configuration)\net461\</LegacyWindowsOutput>
+    <ModernWindowsOutput>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows\bin\$(Configuration)\net6.0-windows\</ModernWindowsOutput>
+    <LegacyWindowsDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net461\Shaker.Markdown.Activities.Windows.Design.dll</LegacyWindowsDesign>
+    <ModernWindowsDesign>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net6.0-windows\Shaker.Markdown.Activities.Windows.Design.dll</ModernWindowsDesign>
   </PropertyGroup>
 
   <Target Name="IncludeLegacyDesigners" Condition="'$(TargetFramework)' == 'net461'">
     <Warning Condition="!Exists('$(LegacyDesignAssembly)')"
              Text="Shaker.Markdown.Activities.Design.dll (net461) was not found at $(LegacyDesignAssembly), so Windows-legacy projects will show the stock designers. Build the solution before packing." />
+    <Warning Condition="!Exists('$(LegacyWindowsOutput)Shaker.Markdown.Activities.Windows.dll')"
+             Text="Shaker.Markdown.Activities.Windows.dll (net461) was not found, so Windows-legacy projects will not get Show Markdown or Markdown To PDF. Build the solution before packing." />
     <ItemGroup>
       <BuildOutputInPackage Include="$(LegacyDesignAssembly)" Condition="Exists('$(LegacyDesignAssembly)')" />
+      <BuildOutputInPackage Include="$(LegacyWindowsOutput)Shaker.Markdown.Activities.Windows.dll"
+                            Condition="Exists('$(LegacyWindowsOutput)Shaker.Markdown.Activities.Windows.dll')" />
+      <BuildOutputInPackage Include="$(LegacyWindowsDesign)" Condition="Exists('$(LegacyWindowsDesign)')" />
+      <BuildOutputInPackage Include="$(LegacyWindowsOutput)Microsoft.Web.WebView2.Core.dll"
+                            Condition="Exists('$(LegacyWindowsOutput)Microsoft.Web.WebView2.Core.dll')" />
+      <BuildOutputInPackage Include="$(LegacyWindowsOutput)Microsoft.Web.WebView2.Wpf.dll"
+                            Condition="Exists('$(LegacyWindowsOutput)Microsoft.Web.WebView2.Wpf.dll')" />
+      <BuildOutputInPackage Include="$(LegacyWindowsOutput)runtimes\win-x64\native\WebView2Loader.dll"
+                            Condition="Exists('$(LegacyWindowsOutput)runtimes\win-x64\native\WebView2Loader.dll')" />
     </ItemGroup>
   </Target>
 
@@ -140,6 +155,11 @@
                             Condition="Exists('$(ViewerOutput)Microsoft.Web.WebView2.Wpf.dll')" />
       <BuildOutputInPackage Include="$(ViewerOutput)runtimes\win-x64\native\WebView2Loader.dll"
                             Condition="Exists('$(ViewerOutput)runtimes\win-x64\native\WebView2Loader.dll')" />
+
+      <!-- Show Markdown and Markdown To PDF, and the icons for them. -->
+      <BuildOutputInPackage Include="$(ModernWindowsOutput)Shaker.Markdown.Activities.Windows.dll"
+                            Condition="Exists('$(ModernWindowsOutput)Shaker.Markdown.Activities.Windows.dll')" />
+      <BuildOutputInPackage Include="$(ModernWindowsDesign)" Condition="Exists('$(ModernWindowsDesign)')" />
     </ItemGroup>
   </Target>
 

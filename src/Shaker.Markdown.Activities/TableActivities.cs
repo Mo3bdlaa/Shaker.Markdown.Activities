@@ -9,7 +9,6 @@ using Shaker.Markdown.Core;
 namespace Shaker.Markdown.Activities
 {
     /// <summary>Reads a Markdown table into a <see cref="DataTable"/>.</summary>
-    [Category(Categories.Markdown)]
     [DisplayName("Get DataTable From Markdown")]
     [Description("Reads a Markdown table into a DataTable, ready for For Each Row or Write Range.")]
     public sealed class GetDataTableFromMarkdown : MarkdownActivityBase<DataTable>

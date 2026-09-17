@@ -4,9 +4,8 @@ Markdown inside UiPath. A **Markdown Note** that Studio draws as a formatted doc
 of as source, a **Markdown** button in the ribbon for reading the project's `.md` files, and activities that
 turn Markdown into HTML, plain text, a DataTable or a PDF while a process runs.
 
-Two packages. `Shaker.Markdown.Activities` is the one to install; `Shaker.Markdown.Activities.Windows` adds
-the two activities that need a screen. Everything from both appears under **Markdown** in the Activities
-panel, whatever the dependency list calls them.
+One package, `Shaker.Markdown.Activities`. Every activity in it appears under **Markdown** in the Activities
+panel — one folder, at the top level, whatever the dependency list calls the package.
 
 ![The Markdown mark](src/Shaker.Markdown.Activities/package-icon.png)
 
@@ -41,16 +40,15 @@ here goes through one of those, which decides what was possible and what was not
 `Markdown Note` is the only one that needs a designer. The rest are ordinary activities and work the same in
 a Windows project, a Windows-legacy project and a cross-platform one.
 
-### Shaker.Markdown.Activities.Windows
-
-A separate package, because these two need a screen and a browser and the base package should not drag
-either into a cross-platform project. It depends on the base package and on the WebView2 runtime, and
-installs into Windows projects only.
+### The two that need a screen
 
 | Activity | What it does |
 |---|---|
 | **Show Markdown** | Puts a rendered document on screen and waits until the window is closed. Attended machines only. |
 | **Markdown To PDF** | Renders a document and prints it to a PDF file, portrait or landscape. |
+
+These ship in the same package but in a Windows-only assembly, so a cross-platform project gets neither them
+nor the browser behind them. Both work in a Windows project and a Windows-legacy one.
 
 Both render through WebView2, so the **Microsoft Edge WebView2 Evergreen Runtime** has to be installed on
 the machine that runs them. There is no fallback renderer here on purpose: these two exist to show a
@@ -73,10 +71,10 @@ than one per keystroke.
 
 ## Project types
 
-| Project type | Activities | Rendered note on the canvas | Ribbon viewer | Windows package |
+| Project type | Activities | Rendered note on the canvas | Ribbon viewer | Show Markdown / To PDF |
 |---|---|---|---|---|
 | Windows (.NET 8) | Yes | Yes | Yes | Yes |
-| Windows – Legacy (.NET Framework) | Yes | Yes | No | No |
+| Windows – Legacy (.NET Framework) | Yes | Yes | No | Yes |
 | Cross-platform | Yes | No — shown in the properties panel instead | No | No |
 
 The designers are WPF, so they exist only where Studio is. A cross-platform project still gets every
@@ -84,16 +82,15 @@ activity and a `Markdown Note` still carries its text; what it loses is the draw
 package ships three sets of assemblies:
 
 ```
-Shaker.Markdown.Activities
-  lib/net461/              activities + engine + .NET Framework designers  → Windows-legacy Studio
-  lib/net6.0/              activities + engine + .NET designers + viewer   → modern Studio, and the robot
-
-Shaker.Markdown.Activities.Windows
-  lib/net6.0-windows7.0/   Show Markdown, Markdown To PDF, and their icons → Windows projects only
+lib/net461/   activities, engine, .NET Framework designers,
+              Show Markdown + Markdown To PDF, WebView2       → Windows-legacy Studio
+lib/net6.0/   activities, engine, .NET designers, the viewer,
+              Show Markdown + Markdown To PDF, WebView2       → modern Studio, and the robot
 ```
 
-The Windows package deliberately carries no copy of the engine: it depends on the base package, and a second
-`Shaker.Markdown.Core.dll` on the probing path is a problem nobody enjoys diagnosing. CI asserts that.
+One WebView2 build serves both, pinned to `1.0.2478.35` — later releases dropped their .NET Framework
+assets, and two versions in one package would mean a Windows-legacy build running against an assembly that
+is not the one beside it. CI asserts the whole layout.
 
 ## Rendering
 
@@ -127,7 +124,6 @@ projects — so CI needs nothing but the .NET 8 SDK.
 dotnet build Shaker.Markdown.Activities.sln -c Release
 dotnet test  Shaker.Markdown.Activities.sln -c Release
 dotnet pack  src/Shaker.Markdown.Activities/Shaker.Markdown.Activities.csproj -c Release -o artifacts
-dotnet pack  src/Shaker.Markdown.Activities.Windows/Shaker.Markdown.Activities.Windows.csproj -c Release -o artifacts
 ```
 
 Pack after a full solution build, not on its own: the designers and the viewer are pulled into the package
@@ -140,8 +136,8 @@ src/Shaker.Markdown.Core               netstandard2.0     parsing and rendering,
 src/Shaker.Markdown.Activities         net461;net6.0      the activities
 src/Shaker.Markdown.Activities.Design  net461;net6.0-win  the canvas designers
 src/Shaker.Markdown.Activities.Wizard  net6.0-windows     the ribbon viewer
-src/…Activities.Windows                net6.0-windows     Show Markdown and Markdown To PDF
-src/…Activities.Windows.Design         net6.0-windows     their icons
+src/…Activities.Windows                net461;net6.0-win  Show Markdown and Markdown To PDF
+src/…Activities.Windows.Design         net461;net6.0-win  their panel folder and icons
 stubs/                                 net6.0-windows     stand-ins for the designer assemblies Studio owns
 tests/                                 net8.0             the engine's tests
 tools/make-icon.py                                        regenerates the icons
@@ -150,6 +146,33 @@ tools/make-icon.py                                        regenerates the icons
 `stubs/` needs a word of explanation: no NuGet feed publishes `System.Activities.Presentation` or
 `System.Activities.Metadata` for .NET, and Studio supplies them itself at run time. The stubs stand in at
 compile time with the identities Studio loads, and are never shipped. See `stubs/README.md`.
+
+## Two Studio conventions worth knowing
+
+Both of these are how Studio actually behaves rather than how it looks like it should, and both cost this
+repo a round trip.
+
+**The Activities panel folder comes from the attribute table, not from the activity class.** A
+`[Category("Markdown")]` on the class is read for the *properties* panel and ignored for the Activities
+panel, which without other instruction groups activities by package id — and splits it on the dots, so
+`Shaker.Markdown.Activities` became *Shaker ▸ Markdown*. The folder is set by registering the attribute in
+`IRegisterMetadata`:
+
+```csharp
+builder.AddCustomAttributes(typeof(MarkdownNote), new CategoryAttribute("Markdown"));
+```
+
+Dots nest there too, so one name with no dots is one folder at the top level. This is registered for every
+activity in `DesignerMetadata` and `WindowsDesignerMetadata`.
+
+**Icons come from `Themes/Icons.xaml`, not from the designer.** Setting `ActivityDesigner.Icon` in a
+designer's constructor does not put an icon in the Activities panel. Studio looks up a `DrawingBrush` by the
+key `<ActivityName>Icon` in the design assembly, so the icons live in
+`src/Shaker.Markdown.Activities.Design/Themes/Icons.xaml` and its Windows counterpart, keyed by activity type
+name. A renamed activity silently loses its icon, so CI checks that every activity still has one.
+
+Because Studio applies those icons by name, the converters keep UiPath's own card rather than a custom
+designer — only the note needs one, and it needs one for the rendering, not the icon.
 
 ## Notes on the parts that are not contracts
 

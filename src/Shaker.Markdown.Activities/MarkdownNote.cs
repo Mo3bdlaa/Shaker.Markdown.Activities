@@ -14,7 +14,6 @@ namespace Shaker.Markdown.Activities
     /// not load WPF designers, the note still sits on the canvas and still carries its text, it is simply
     /// shown as source in the properties panel.
     /// </remarks>
-    [Category(Categories.Markdown)]
     [DisplayName("Markdown Note")]
     [Description("Documents a workflow with rendered Markdown. Does nothing when the process runs.")]
     public sealed class MarkdownNote : CodeActivity

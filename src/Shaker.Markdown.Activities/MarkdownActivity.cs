@@ -3,7 +3,7 @@ using System.Activities;
 namespace Shaker.Markdown.Activities
 {
     /// <summary>The names the properties panel and the activities panel group by.</summary>
-    internal static class Categories
+    public static class Categories
     {
         /// <summary>
         /// Where every activity in this pack appears in the Activities panel.
@@ -12,14 +12,27 @@ namespace Shaker.Markdown.Activities
         /// Deliberately not the package id. The package is installed and listed as
         /// <c>Shaker.Markdown.Activities</c>, which is what a project's dependencies should say; what
         /// somebody searching the panel is looking for is "Markdown", so that is the folder they sit in.
+        ///
+        /// Studio reads this from the attribute table the design assembly registers, not from an attribute
+        /// on the activity class, so <c>DesignerMetadata</c> is where it takes effect. Dots would nest it:
+        /// one name with no dots is one folder at the top level.
         /// </remarks>
-        internal const string Markdown = "Markdown";
+        public const string Markdown = "Markdown";
 
-        internal const string Input = "Input";
-        internal const string Output = "Output";
-        internal const string Options = "Options";
-        internal const string Note = "Note";
-        internal const string Appearance = "Appearance";
+        /// <summary>What the activity is given.</summary>
+        public const string Input = "Input";
+
+        /// <summary>What the activity hands back.</summary>
+        public const string Output = "Output";
+
+        /// <summary>Knobs that change how the work is done, all of which have a sensible default.</summary>
+        public const string Options = "Options";
+
+        /// <summary>The note's own text and where it comes from.</summary>
+        public const string Note = "Note";
+
+        /// <summary>How something is drawn rather than what it does.</summary>
+        public const string Appearance = "Appearance";
     }
 
     /// <summary>Convenience helpers for arguments a workflow may simply have left unbound.</summary>

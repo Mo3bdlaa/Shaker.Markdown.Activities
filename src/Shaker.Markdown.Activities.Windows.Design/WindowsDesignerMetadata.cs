@@ -2,38 +2,24 @@ using System;
 using System.Activities.Presentation.Metadata;
 using System.ComponentModel;
 using System.Diagnostics;
-using Shaker.Markdown.Activities.Design;
 
 namespace Shaker.Markdown.Activities.Windows.Design
 {
-    /// <summary>The icon for <see cref="ShowMarkdown"/>.</summary>
-    public sealed class ShowMarkdownDesigner : MarkdownActivityDesigner
-    {
-        /// <summary>Creates the designer.</summary>
-        public ShowMarkdownDesigner() : base(typeof(ShowMarkdown))
-        {
-        }
-    }
-
-    /// <summary>The icon for <see cref="MarkdownToPdf"/>.</summary>
-    public sealed class MarkdownToPdfDesigner : MarkdownActivityDesigner
-    {
-        /// <summary>Creates the designer.</summary>
-        public MarkdownToPdfDesigner() : base(typeof(MarkdownToPdf))
-        {
-        }
-    }
-
     /// <summary>
-    /// Attaches the designers to this package's two activities. Studio looks for implementations of
-    /// <see cref="IRegisterMetadata"/> when it loads the package and calls <see cref="Register"/> once.
+    /// Puts this assembly's two activities in the same Activities panel folder as the rest of the pack, and
+    /// names their outputs. Studio looks for implementations of <see cref="IRegisterMetadata"/> when it
+    /// loads the package and calls <see cref="Register"/> once.
     /// </summary>
+    /// <remarks>
+    /// No designers. Both activities keep UiPath's stock card, which already shows their arguments well;
+    /// their icons come from <c>Themes/Icons.xaml</c>, which Studio reads by activity name.
+    /// </remarks>
     public sealed class WindowsDesignerMetadata : IRegisterMetadata
     {
-        /// <summary>Registers the designers.</summary>
+        /// <summary>Registers the metadata.</summary>
         /// <remarks>
         /// A failure here would otherwise stop Studio from loading the package at all, so anything
-        /// unexpected is swallowed: the activities then fall back to the stock designers and keep working.
+        /// unexpected is swallowed: the activities then fall back to the stock metadata and keep working.
         /// </remarks>
         public void Register()
         {
@@ -41,8 +27,12 @@ namespace Shaker.Markdown.Activities.Windows.Design
             {
                 var builder = new AttributeTableBuilder();
 
-                builder.AddCustomAttributes(typeof(ShowMarkdown), new DesignerAttribute(typeof(ShowMarkdownDesigner)));
-                builder.AddCustomAttributes(typeof(MarkdownToPdf), new DesignerAttribute(typeof(MarkdownToPdfDesigner)));
+                // The same folder as the rest of the pack, so these two land beside the activities they
+                // belong with rather than starting a second folder of their own.
+                var category = new CategoryAttribute(Shaker.Markdown.Activities.Categories.Markdown);
+
+                builder.AddCustomAttributes(typeof(ShowMarkdown), category);
+                builder.AddCustomAttributes(typeof(MarkdownToPdf), category);
 
                 Describe(builder, typeof(ShowMarkdown), "Result", "Closed",
                     "True once the window has been shown and closed.");
@@ -54,7 +44,7 @@ namespace Shaker.Markdown.Activities.Windows.Design
             }
             catch (Exception exception)
             {
-                Debug.WriteLine("Markdown Windows designers could not be registered: " + exception);
+                Debug.WriteLine("Markdown Windows metadata could not be registered: " + exception);
             }
         }
 

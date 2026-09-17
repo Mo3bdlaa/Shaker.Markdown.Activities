@@ -22,13 +22,30 @@ namespace Shaker.Markdown.Activities.Design
             {
                 var builder = new AttributeTableBuilder();
 
-                // The note draws its own card; the rest take the stock card and this pack's icon.
+                // The note draws its own card. The rest keep UiPath's, which already shows their arguments
+                // well; what they were missing was an icon, and Themes/Icons.xaml supplies that by name.
                 builder.AddCustomAttributes(typeof(MarkdownNote), new DesignerAttribute(typeof(MarkdownNoteDesigner)));
-                builder.AddCustomAttributes(typeof(MarkdownToHtml), new DesignerAttribute(typeof(MarkdownToHtmlDesigner)));
-                builder.AddCustomAttributes(typeof(MarkdownToText), new DesignerAttribute(typeof(MarkdownToTextDesigner)));
-                builder.AddCustomAttributes(typeof(ReadMarkdownFile), new DesignerAttribute(typeof(ReadMarkdownFileDesigner)));
-                builder.AddCustomAttributes(typeof(GetMarkdownOutline), new DesignerAttribute(typeof(GetMarkdownOutlineDesigner)));
-                builder.AddCustomAttributes(typeof(GetDataTableFromMarkdown), new DesignerAttribute(typeof(GetDataTableFromMarkdownDesigner)));
+
+                // Where the pack sits in the Activities panel.
+                //
+                // This is the registration that decides it. A [Category] on the activity class is read for
+                // the properties panel and not for this, so without this every activity fell back to being
+                // grouped by package id — Shaker.Markdown.Activities, which Studio splits on the dots into
+                // Shaker > Markdown. One name with no dots in it is one folder.
+                var category = new CategoryAttribute(Categories.Markdown);
+
+                foreach (Type activity in new[]
+                         {
+                             typeof(MarkdownNote),
+                             typeof(MarkdownToHtml),
+                             typeof(MarkdownToText),
+                             typeof(ReadMarkdownFile),
+                             typeof(GetMarkdownOutline),
+                             typeof(GetDataTableFromMarkdown)
+                         })
+                {
+                    builder.AddCustomAttributes(activity, category);
+                }
 
                 // Result arrives from CodeActivity<T> with no category of its own, which lands it under Misc,
                 // away from the outputs it belongs with.

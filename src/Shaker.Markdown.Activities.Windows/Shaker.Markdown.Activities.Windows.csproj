@@ -2,66 +2,55 @@
 
   <PropertyGroup>
     <!--
-      Windows only, and modern Studio only. WebView2 does the rendering and the printing, its assets floor
-      at net462, and shipping a second copy of it for a Windows-legacy target would put two of it on the
-      probing path beside the one the base package already carries. Windows-legacy projects keep the base
-      package, which is where the note and the converters live.
+      Windows only, but not design time: these two activities put a window on screen and print, so they are
+      what a Robot runs. Two targets, one for each generation of Studio, and the outputs are injected into
+      the one package beside the portable activities rather than shipped as a package of their own.
     -->
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFrameworks>net461;net6.0-windows</TargetFrameworks>
     <UseWPF>true</UseWPF>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>Shaker.Markdown.Activities.Windows</RootNamespace>
     <AssemblyName>Shaker.Markdown.Activities.Windows</AssemblyName>
-    <PackageId>Shaker.Markdown.Activities.Windows</PackageId>
-    <Title>Shaker Markdown Activities – Windows</Title>
-    <Description>Windows-only companions to Shaker Markdown Activities: show rendered Markdown in a window and wait for it to be closed, and print Markdown to a PDF. Both render through WebView2, so the Microsoft Edge WebView2 runtime has to be installed on the machine that runs them.</Description>
-    <PackageTags>UiPath;RPA;activities;markdown;pdf;dialog;windows</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageIcon>package-icon.png</PackageIcon>
-    <PackageReleaseNotes>Show Markdown, which puts a rendered document on screen and waits until it is closed, and Markdown To PDF, which prints one to a file. Both are attended-machine activities and both need the WebView2 runtime.</PackageReleaseNotes>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      A .NET project resolves its NuGet assemblies from the package cache through deps.json and does not
+      copy them to bin. This package has to carry WebView2's assemblies beside the assemblies that use them,
+      so they have to be somewhere to copy from. Harmless for .NET Framework, which copies them anyway.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net461'">
+    <!-- WebView2's assets floor at net462; see the note in Shaker.Markdown.Activities.csproj. -->
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
 
   <ItemGroup>
-    <!--
-      The base package, which carries the activities, the engine and the designers. A project reference to a
-      packable project becomes a package dependency, which is exactly the relationship wanted here: this is
-      a companion to that package, not a copy of it.
-    -->
-    <ProjectReference Include="..\Shaker.Markdown.Activities\Shaker.Markdown.Activities.csproj" />
-    <!--
-      Compile time only. The engine travels inside the base package, and taking a second copy of it here
-      would put two on the probing path.
-    -->
+    <!-- Compile time only. Both of these already travel in the package these activities ship inside. -->
+    <ProjectReference Include="..\Shaker.Markdown.Activities\Shaker.Markdown.Activities.csproj" PrivateAssets="all" />
     <ProjectReference Include="..\Shaker.Markdown.Core\Shaker.Markdown.Core.csproj" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
     <!--
-      A real dependency here, unlike in the base package. There WebView2 serves one design-time window and
-      had no business being restored into an automation project; here it is what the activities run on, so
-      NuGet should restore it properly with its native assets rather than have them carried by hand.
+      Carried rather than depended on, like everything else Windows-specific here: a cross-platform project
+      installing the pack has no use for WebView2 and should not have it restored into its dependencies.
+      The assemblies travel beside these activities instead.
     -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2957.106" />
+    <!-- 1.0.2478.35 rather than the newest. Later releases dropped the .NET Framework assets, and
+      this package has to serve a Windows-legacy project as well as a modern one from the same source. It
+      carries everything used here: PrintToPdfAsync, the print settings, and the virtual host mapping. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2478.35" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="System.Activities" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0-windows'">
     <PackageReference Include="UiPath.Workflow" Version="6.0.0-20240401-07" PrivateAssets="all" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    <None Include="..\Shaker.Markdown.Activities\package-icon.png" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <PropertyGroup>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeWindowsDesigners</TargetsForTfmSpecificBuildOutput>
-    <WindowsDesignAssembly>$(MSBuildThisFileDirectory)..\Shaker.Markdown.Activities.Windows.Design\bin\$(Configuration)\net6.0-windows\Shaker.Markdown.Activities.Windows.Design.dll</WindowsDesignAssembly>
-  </PropertyGroup>
-
-  <Target Name="IncludeWindowsDesigners">
-    <Warning Condition="!Exists('$(WindowsDesignAssembly)')"
-             Text="Shaker.Markdown.Activities.Windows.Design.dll was not found at $(WindowsDesignAssembly), so these activities will show the stock icons. Build the solution before packing." />
-    <ItemGroup>
-      <BuildOutputInPackage Include="$(WindowsDesignAssembly)" Condition="Exists('$(WindowsDesignAssembly)')" />
-    </ItemGroup>
-  </Target>
 
 </Project>

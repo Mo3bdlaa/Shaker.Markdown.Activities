@@ -13,6 +13,12 @@
     <AssemblyName>Shaker.Markdown.Activities.Wizard</AssemblyName>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      A .NET project resolves its NuGet assemblies from the package cache through deps.json and does not
+      copy them to bin. This package has to carry WebView2's assemblies beside the assemblies that use them,
+      so they have to be somewhere to copy from. Harmless for .NET Framework, which copies them anyway.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,7 +43,10 @@
       try/catch, so a Studio without the Evergreen runtime installed falls back to the FlowDocument
       renderer instead of failing to open the viewer.
     -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2957.106" />
+    <!-- 1.0.2478.35 rather than the newest. Later releases dropped the .NET Framework assets, and
+      this package has to serve a Windows-legacy project as well as a modern one from the same source. It
+      carries everything used here: PrintToPdfAsync, the print settings, and the virtual host mapping. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2478.35" />
   </ItemGroup>
 
 </Project>
