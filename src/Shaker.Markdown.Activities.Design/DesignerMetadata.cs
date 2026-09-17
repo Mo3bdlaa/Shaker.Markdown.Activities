@@ -22,7 +22,13 @@ namespace Shaker.Markdown.Activities.Design
             {
                 var builder = new AttributeTableBuilder();
 
+                // The note draws its own card; the rest take the stock card and this pack's icon.
                 builder.AddCustomAttributes(typeof(MarkdownNote), new DesignerAttribute(typeof(MarkdownNoteDesigner)));
+                builder.AddCustomAttributes(typeof(MarkdownToHtml), new DesignerAttribute(typeof(MarkdownToHtmlDesigner)));
+                builder.AddCustomAttributes(typeof(MarkdownToText), new DesignerAttribute(typeof(MarkdownToTextDesigner)));
+                builder.AddCustomAttributes(typeof(ReadMarkdownFile), new DesignerAttribute(typeof(ReadMarkdownFileDesigner)));
+                builder.AddCustomAttributes(typeof(GetMarkdownOutline), new DesignerAttribute(typeof(GetMarkdownOutlineDesigner)));
+                builder.AddCustomAttributes(typeof(GetDataTableFromMarkdown), new DesignerAttribute(typeof(GetDataTableFromMarkdownDesigner)));
 
                 // Result arrives from CodeActivity<T> with no category of its own, which lands it under Misc,
                 // away from the outputs it belongs with.
@@ -37,6 +43,9 @@ namespace Shaker.Markdown.Activities.Design
 
                 Describe(builder, typeof(GetMarkdownOutline), "Result", "Headings",
                     "The document's headings in order. Each one carries its Level, its Text and its Anchor.");
+
+                Describe(builder, typeof(GetDataTableFromMarkdown), "Result", "DataTable",
+                    "The table, every column a string. Hand it to For Each Row or Write Range.");
 
                 MetadataStore.AddAttributeTable(builder.CreateTable());
             }

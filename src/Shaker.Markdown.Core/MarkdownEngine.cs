@@ -122,6 +122,62 @@ namespace Shaker.Markdown.Core
         }
 
         /// <summary>
+        /// Lists the tables in the document, flattened to text, in the order they appear.
+        /// </summary>
+        /// <remarks>
+        /// Tables are an extension rather than part of CommonMark, so this finds nothing under
+        /// <see cref="MarkdownFlavor.CommonMark"/> — there is no table there to find.
+        /// </remarks>
+        public static IList<MarkdownTable> GetTables(string markdown, MarkdownOptions options = null)
+        {
+            var tables = new List<MarkdownTable>();
+
+            if (string.IsNullOrEmpty(markdown))
+                return tables;
+
+            foreach (Markdig.Extensions.Tables.Table table
+                     in Parse(markdown, options).Descendants<Markdig.Extensions.Tables.Table>())
+            {
+                var headers = new List<string>();
+                var rows = new List<IList<string>>();
+
+                foreach (Markdig.Extensions.Tables.TableRow row
+                         in table.OfType<Markdig.Extensions.Tables.TableRow>())
+                {
+                    List<string> cells = row
+                        .OfType<Markdig.Extensions.Tables.TableCell>()
+                        .Select(CellText)
+                        .ToList();
+
+                    if (row.IsHeader && headers.Count == 0)
+                        headers.AddRange(cells);
+                    else
+                        rows.Add(cells);
+                }
+
+                tables.Add(new MarkdownTable(headers, rows));
+            }
+
+            return tables;
+        }
+
+        /// <summary>One cell's text, with the paragraph structure inside it flattened to a space.</summary>
+        private static string CellText(Markdig.Extensions.Tables.TableCell cell)
+        {
+            var text = new System.Text.StringBuilder();
+
+            foreach (ParagraphBlock paragraph in cell.Descendants<ParagraphBlock>())
+            {
+                if (text.Length > 0)
+                    text.Append(' ');
+
+                text.Append(FlattenToText(paragraph.Inline));
+            }
+
+            return text.ToString().Trim();
+        }
+
+        /// <summary>
         /// Reduces formatted inline content to its text, so that <c>## The `Result` property</c> reads as
         /// "The Result property" wherever a heading is shown outside a renderer.
         /// </summary>

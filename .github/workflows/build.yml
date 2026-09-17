@@ -27,14 +27,16 @@ jobs:
         run: dotnet test Shaker.Markdown.Activities.sln -c Release --no-build
 
       - name: Pack
-        run: dotnet pack src/Shaker.Markdown.Activities/Shaker.Markdown.Activities.csproj -c Release -o artifacts --no-build
+        run: |
+          dotnet pack src/Shaker.Markdown.Activities/Shaker.Markdown.Activities.csproj -c Release -o artifacts --no-build
+          dotnet pack src/Shaker.Markdown.Activities.Windows/Shaker.Markdown.Activities.Windows.csproj -c Release -o artifacts --no-build
 
       # Packing without the designers is only a warning, and warnings do not fail a build, so the shape of
       # the package is asserted here instead.
       - name: Verify package layout
         run: |
           set -euo pipefail
-          package=$(ls artifacts/*.nupkg)
+          package=artifacts/Shaker.Markdown.Activities.1.0.0.nupkg
           contents=$(unzip -l "$package")
           echo "$contents"
 
@@ -93,7 +95,53 @@ jobs:
             exit 1
           fi
 
+      - name: Verify the Windows package layout
+        run: |
+          set -euo pipefail
+          package=artifacts/Shaker.Markdown.Activities.Windows.1.0.0.nupkg
+          contents=$(unzip -l "$package")
+          echo "$contents"
+
+          expect() {
+            if ! grep -q "$1" <<<"$contents"; then
+              echo "::error::Expected $1 in $package"
+              exit 1
+            fi
+          }
+
+          # Windows only, so one target and no cross-platform assets at all.
+          expect "lib/net6.0-windows7.0/Shaker.Markdown.Activities.Windows.dll"
+          expect "lib/net6.0-windows7.0/Shaker.Markdown.Activities.Windows.Design.dll"
+
+          if grep -qE "lib/net(461|6\\.0)/" <<<"$contents"; then
+            echo "::error::The Windows package must ship Windows assets only"
+            exit 1
+          fi
+
+          nuspec=$(unzip -p "$package" "*.nuspec")
+
+          # It is a companion to the base package, not a copy: the engine and the activities come from
+          # there, and WebView2 is a real dependency here because it is what these two activities run on.
+          for wanted in Shaker.Markdown.Activities Microsoft.Web.WebView2; do
+            if ! grep -q "id=\"$wanted\"" <<<"$nuspec"; then
+              echo "::error::The Windows package should depend on $wanted"
+              echo "$nuspec"
+              exit 1
+            fi
+          done
+
+          if grep -q "UiPath.Workflow" <<<"$nuspec"; then
+            echo "::error::The package must not depend on UiPath.Workflow; the host provides the workflow runtime"
+            exit 1
+          fi
+
+          # The engine ships inside the base package. A second copy here would put two on the probing path.
+          if grep -q "Shaker.Markdown.Core.dll" <<<"$contents"; then
+            echo "::error::The Windows package must not carry its own copy of the engine"
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
-          name: activity-package
+          name: activity-packages
           path: artifacts/*.nupkg

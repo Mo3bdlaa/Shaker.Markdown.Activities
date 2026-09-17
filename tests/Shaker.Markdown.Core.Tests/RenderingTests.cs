@@ -194,3 +194,78 @@ Intro text.
         }
     }
 }
+
+namespace Shaker.Markdown.Core.Tests
+{
+    public class TableTests
+    {
+        private const string Document = @"# Report
+
+| Name | Amount | Note |
+|------|--------|------|
+| Ada  | 12     | ok   |
+| Grace| 7      |      |
+
+Some text.
+
+| Only | One |
+|------|-----|
+| a    | b   |
+";
+
+        [Fact]
+        public void HeadersAndRowsComeBackSeparately()
+        {
+            MarkdownTable table = MarkdownEngine.GetTables(Document)[0];
+
+            Assert.Equal(new[] { "Name", "Amount", "Note" }, table.Headers.ToArray());
+            Assert.Equal(2, table.Rows.Count);
+            Assert.Equal(new[] { "Ada", "12", "ok" }, table.Rows[0].ToArray());
+        }
+
+        [Fact]
+        public void EveryTableInTheDocumentIsFound()
+        {
+            Assert.Equal(2, MarkdownEngine.GetTables(Document).Count);
+            Assert.Equal(new[] { "Only", "One" }, MarkdownEngine.GetTables(Document)[1].Headers.ToArray());
+        }
+
+        [Fact]
+        public void AnEmptyCellIsAnEmptyStringRatherThanMissing()
+        {
+            MarkdownTable table = MarkdownEngine.GetTables(Document)[0];
+
+            Assert.Equal(3, table.Rows[1].Count);
+            Assert.Equal(string.Empty, table.Rows[1][2]);
+        }
+
+        [Fact]
+        public void CellFormattingIsFlattenedToItsWords()
+        {
+            MarkdownTable table = MarkdownEngine.GetTables(
+                "| A | B |\n|---|---|\n| **bold** | `code` |")[0];
+
+            Assert.Equal(new[] { "bold", "code" }, table.Rows[0].ToArray());
+        }
+
+        [Fact]
+        public void ColumnCountFollowsTheWidestRow()
+        {
+            Assert.Equal(3, MarkdownEngine.GetTables(Document)[0].ColumnCount);
+        }
+
+        [Fact]
+        public void ADocumentWithNoTablesGivesNone()
+        {
+            Assert.Empty(MarkdownEngine.GetTables("# Just a heading"));
+            Assert.Empty(MarkdownEngine.GetTables(null));
+        }
+
+        [Fact]
+        public void PlainCommonMarkHasNoTablesToFind()
+        {
+            Assert.Empty(MarkdownEngine.GetTables(
+                Document, new MarkdownOptions { Flavor = MarkdownFlavor.CommonMark }));
+        }
+    }
+}

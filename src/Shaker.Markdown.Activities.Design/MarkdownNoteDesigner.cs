@@ -1,5 +1,7 @@
 using System;
+using System.Activities;
 using System.Activities.Presentation;
+using System.Activities.Presentation.Model;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -13,24 +15,67 @@ using Shaker.Markdown.Core;
 namespace Shaker.Markdown.Activities.Design
 {
     /// <summary>
-    /// The card Studio draws for a <c>Markdown Note</c>: the document itself, rendered, instead of the
-    /// activity's properties.
+    /// The card Studio draws for a <c>Markdown Note</c>: an editor for the document, and the document
+    /// itself, rendered, instead of the activity's properties.
     /// </summary>
     public class MarkdownNoteDesigner : ActivityDesigner
     {
         private readonly FlowDocumentScrollViewer _viewer;
+        private readonly TextBox _editor;
         private readonly TextBlock _caption;
+        private readonly Border _editorFrame;
         private readonly Border _card;
         private INotifyPropertyChanged _watched;
+
+        /// <summary>True while this designer is the one changing the model, so it ignores the echo.</summary>
+        private bool _writing;
 
         /// <summary>Builds the card. Studio creates one of these per note on the canvas.</summary>
         public MarkdownNoteDesigner()
         {
+            try
+            {
+                Icon = Glyphs.For(nameof(MarkdownNote));
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine("Markdown note icon could not be built: " + exception);
+            }
+
             _caption = new TextBlock
             {
                 FontSize = 10.5,
                 Margin = new Thickness(2, 0, 0, 4),
                 TextTrimming = TextTrimming.CharacterEllipsis
+            };
+
+            _editor = new TextBox
+            {
+                AcceptsReturn = true,
+                AcceptsTab = true,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                FontFamily = new FontFamily("Consolas, Courier New"),
+                FontSize = 11.5,
+                MinLines = 4,
+                MaxLength = 0,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(6, 4, 6, 4)
+            };
+
+            // The preview follows the typing; the model is only written on the way out, so that one edit is
+            // one undo step rather than one per keystroke.
+            _editor.TextChanged += (sender, e) => Preview(_editor.Text);
+            _editor.LostFocus += (sender, e) => Commit(_editor.Text);
+
+            _editorFrame = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(3),
+                Margin = new Thickness(0, 0, 0, 8),
+                MaxHeight = 260,
+                Visibility = Visibility.Collapsed,
+                Child = _editor
             };
 
             _viewer = new FlowDocumentScrollViewer
@@ -48,6 +93,7 @@ namespace Shaker.Markdown.Activities.Design
 
             var layout = new StackPanel();
             layout.Children.Add(_caption);
+            layout.Children.Add(_editorFrame);
             layout.Children.Add(_viewer);
 
             _card = new Border
@@ -82,7 +128,11 @@ namespace Shaker.Markdown.Activities.Design
             Refresh();
         }
 
-        private void OnModelPropertyChanged(object sender, PropertyChangedEventArgs e) => Refresh();
+        private void OnModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (!_writing)
+                Refresh();
+        }
 
         /// <summary>Re-reads the note and redraws it.</summary>
         private void Refresh()
@@ -94,6 +144,10 @@ namespace Shaker.Markdown.Activities.Design
                 _card.Background = palette.Background;
                 _card.BorderBrush = palette.Border;
                 _caption.Foreground = palette.Muted;
+                _editorFrame.BorderBrush = palette.Border;
+                _editor.Background = palette.Subtle;
+                _editor.Foreground = palette.Text;
+                _editor.CaretBrush = palette.Text;
 
                 object activity = ModelItem?.GetCurrentValue();
 
@@ -101,18 +155,29 @@ namespace Shaker.Markdown.Activities.Design
                 if (!(activity is MarkdownNote note))
                 {
                     _caption.Text = "Markdown Note";
+                    _editorFrame.Visibility = Visibility.Collapsed;
                     _viewer.Document = new FlowDocument();
                     return;
                 }
 
                 _viewer.MaxHeight = note.MaxHeight > 0 ? note.MaxHeight : double.PositiveInfinity;
 
-                string basePath;
-                string markdown = ReadMarkdown(note, out basePath, out string caption);
+                string markdown = ReadMarkdown(note, out string basePath, out string caption, out bool editable);
 
                 _caption.Text = caption;
-                _viewer.Document = FlowDocumentMarkdownRenderer.Render(
-                    markdown, note.ToOptions(), palette, basePath);
+                _basePath = basePath;
+                _options = note.ToOptions();
+
+                // Only the note's own literal text can be edited here. An expression, an annotation and a
+                // file all have somewhere else that owns them.
+                _editorFrame.Visibility = note.ShowEditor && editable ? Visibility.Visible : Visibility.Collapsed;
+
+                // Never while the caret is in it: the model echo would move the cursor out from under the
+                // person typing.
+                if (editable && !_editor.IsKeyboardFocusWithin && _editor.Text != (markdown ?? string.Empty))
+                    _editor.Text = markdown ?? string.Empty;
+
+                Render(markdown);
             }
             catch (Exception exception)
             {
@@ -121,13 +186,67 @@ namespace Shaker.Markdown.Activities.Design
             }
         }
 
+        private string _basePath;
+        private MarkdownOptions _options;
+
+        /// <summary>Redraws the preview from text being typed, without touching the model.</summary>
+        private void Preview(string markdown)
+        {
+            Render(string.IsNullOrWhiteSpace(markdown) ? EmptyHint : markdown);
+        }
+
+        private void Render(string markdown)
+        {
+            _viewer.Document = FlowDocumentMarkdownRenderer.Render(
+                markdown, _options, PaletteFromTheme(), _basePath);
+        }
+
+        /// <summary>Writes the edited text back to the activity, as one undoable change.</summary>
+        private void Commit(string markdown)
+        {
+            try
+            {
+                ModelProperty property = ModelItem?.Properties?.Find(nameof(MarkdownNote.Markdown));
+
+                if (property == null)
+                    return;
+
+                ArgumentLiteral.Kind kind = ArgumentLiteral.Read(
+                    property.ComputedValue as InArgument<string>, out string existing);
+
+                // Never write over an expression. The editor is only offered for a literal, but the note's
+                // Source can be changed while the editor still holds focus, and losing somebody's expression
+                // to a stale editor would be the worst bug in this package.
+                if (kind == ArgumentLiteral.Kind.Expression)
+                    return;
+
+                if (existing == markdown)
+                    return;
+
+                _writing = true;
+                property.ComputedValue = ArgumentLiteral.From(markdown);
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine("Markdown note could not save the edited text: " + exception);
+            }
+            finally
+            {
+                _writing = false;
+            }
+        }
+
+        private const string EmptyHint =
+            "*Type Markdown into the editor, or into the note's Markdown property, and it will be rendered here.*";
+
         /// <summary>
         /// Gets the note's text from wherever it says to get it, and says in the caption where that was —
         /// which matters most when the answer is "nowhere", and the note would otherwise just look empty.
         /// </summary>
-        private string ReadMarkdown(MarkdownNote note, out string basePath, out string caption)
+        private string ReadMarkdown(MarkdownNote note, out string basePath, out string caption, out bool editable)
         {
             basePath = null;
+            editable = false;
 
             switch (note.Source)
             {
@@ -145,12 +264,30 @@ namespace Shaker.Markdown.Activities.Design
                     return ReadFile(note, out basePath, out caption);
 
                 default:
+                    return ReadProperty(note, out caption, out editable);
+            }
+        }
+
+        private string ReadProperty(MarkdownNote note, out string caption, out bool editable)
+        {
+            editable = false;
+
+            switch (ArgumentLiteral.Read(note.Markdown, out string text))
+            {
+                case ArgumentLiteral.Kind.Expression:
+                    caption = "Markdown Note · expression";
+                    return "*This note's text comes from the expression `" + text + "`, which has no value " +
+                           "until the process runs, so there is nothing to render here.*";
+
+                case ArgumentLiteral.Kind.Literal:
                     caption = "Markdown Note";
+                    editable = true;
+                    return text;
 
-                    if (string.IsNullOrWhiteSpace(note.Markdown))
-                        return "*Type Markdown into the note's Markdown property and it will be rendered here.*";
-
-                    return note.Markdown;
+                default:
+                    caption = "Markdown Note";
+                    editable = true;
+                    return EmptyHint;
             }
         }
 
@@ -158,17 +295,24 @@ namespace Shaker.Markdown.Activities.Design
         {
             basePath = null;
 
-            if (string.IsNullOrWhiteSpace(note.FilePath))
+            if (ArgumentLiteral.Read(note.FilePath, out string path) == ArgumentLiteral.Kind.Expression)
+            {
+                caption = "Markdown Note · file";
+                return "*This note's file path is the expression `" + path + "`, which has no value until " +
+                       "the process runs, so the file cannot be found from here.*";
+            }
+
+            if (string.IsNullOrWhiteSpace(path))
             {
                 caption = "Markdown Note · file";
                 return "*This note renders a file, and no file path is set yet.*";
             }
 
-            string resolved = ProjectLocator.Resolve(this, note.FilePath);
-            caption = "Markdown Note · " + note.FilePath;
+            string resolved = ProjectLocator.Resolve(this, path);
+            caption = "Markdown Note · " + path;
 
             if (resolved == null || !File.Exists(resolved))
-                return "*There is no file at `" + note.FilePath + "`.*";
+                return "*There is no file at `" + path + "`.*";
 
             try
             {
@@ -178,7 +322,7 @@ namespace Shaker.Markdown.Activities.Design
             catch (Exception exception)
             {
                 Debug.WriteLine("Markdown note could not read " + resolved + ": " + exception);
-                return "*`" + note.FilePath + "` could not be read: " + exception.Message + "*";
+                return "*`" + path + "` could not be read: " + exception.Message + "*";
             }
         }
 

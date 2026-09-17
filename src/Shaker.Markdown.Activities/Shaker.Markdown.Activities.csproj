@@ -5,12 +5,12 @@
     <RootNamespace>Shaker.Markdown.Activities</RootNamespace>
     <AssemblyName>Shaker.Markdown.Activities</AssemblyName>
     <PackageId>Shaker.Markdown.Activities</PackageId>
-    <Title>Markdown Activities</Title>
+    <Title>Shaker Markdown Activities</Title>
     <Description>Render Markdown inside UiPath. Document a workflow with a Markdown note that Studio draws as a formatted document on the canvas — from the note itself, from the activity's annotation, or from a .md file in the project — and convert Markdown to HTML or plain text at run time.</Description>
     <PackageTags>UiPath;RPA;activities;markdown;documentation;readme;html</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>package-icon.png</PackageIcon>
-    <PackageReleaseNotes>Markdown for UiPath: a Markdown Note that renders on the Studio canvas, reads its own annotation or a .md file in the project, plus Markdown To HTML, Markdown To Text, Read Markdown File and Get Markdown Outline, and a Markdown Viewer in Studio's ribbon for browsing the project's .md files.</PackageReleaseNotes>
+    <PackageReleaseNotes>Shaker Markdown Activities: a Markdown Note that renders on the Studio canvas, reads its own annotation or a .md file in the project, plus Markdown To HTML, Markdown To Text, Read Markdown File and Get Markdown Outline, and a Markdown Viewer in Studio's ribbon for browsing the project's .md files.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 

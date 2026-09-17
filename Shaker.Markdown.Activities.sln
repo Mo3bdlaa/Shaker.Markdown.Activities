@@ -23,6 +23,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{62914EF6
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shaker.Markdown.Core.Tests", "tests\Shaker.Markdown.Core.Tests\Shaker.Markdown.Core.Tests.csproj", "{4787F631-38B9-43A0-8F79-7D697BC55B1E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shaker.Markdown.Activities.Windows", "src\Shaker.Markdown.Activities.Windows\Shaker.Markdown.Activities.Windows.csproj", "{FB3C5ECE-882D-406F-83CC-83180B244C73}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shaker.Markdown.Activities.Windows.Design", "src\Shaker.Markdown.Activities.Windows.Design\Shaker.Markdown.Activities.Windows.Design.csproj", "{788D24C3-9BA7-4D66-93B5-A68DB61DC21C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,6 +64,14 @@ Global
 		{4787F631-38B9-43A0-8F79-7D697BC55B1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4787F631-38B9-43A0-8F79-7D697BC55B1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4787F631-38B9-43A0-8F79-7D697BC55B1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB3C5ECE-882D-406F-83CC-83180B244C73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB3C5ECE-882D-406F-83CC-83180B244C73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB3C5ECE-882D-406F-83CC-83180B244C73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB3C5ECE-882D-406F-83CC-83180B244C73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{788D24C3-9BA7-4D66-93B5-A68DB61DC21C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{788D24C3-9BA7-4D66-93B5-A68DB61DC21C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{788D24C3-9BA7-4D66-93B5-A68DB61DC21C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{788D24C3-9BA7-4D66-93B5-A68DB61DC21C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6B787179-3AD1-4C9E-AD19-3A2AA2AF4D6F} = {29800FD9-0023-4631-A56A-337F7330C38F}
@@ -69,5 +81,7 @@ Global
 		{46A32E81-5B4C-4329-AA75-3380409A425A} = {132E0401-1475-4B46-BDFD-6D74B304AD80}
 		{A718F246-29F2-4A27-8E5F-86A077DD3620} = {132E0401-1475-4B46-BDFD-6D74B304AD80}
 		{4787F631-38B9-43A0-8F79-7D697BC55B1E} = {62914EF6-631D-42C6-A9ED-E6171A8C1885}
+		{FB3C5ECE-882D-406F-83CC-83180B244C73} = {29800FD9-0023-4631-A56A-337F7330C38F}
+		{788D24C3-9BA7-4D66-93B5-A68DB61DC21C} = {29800FD9-0023-4631-A56A-337F7330C38F}
 	EndGlobalSection
 EndGlobal
